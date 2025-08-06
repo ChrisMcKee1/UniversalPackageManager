@@ -1,0 +1,86 @@
+﻿{
+  "_metadata": {
+    "version": "3.0",
+    "schema": "https://github.com/UniversalPackageManager/schema/v3.0",
+    "lastModified": "2025-08-06",
+    "description": "Universal Package Manager v3.0 - PowerShell 7+ Exclusive"
+  },
+  "Advanced": {
+    "maxRetries": 3,
+    "parallelUpdates": false,
+    "skipFailedPackages": true,
+    "maxParallel": 4,
+    "retryDelay": 30,
+    "enableStructuredLogging": true,
+    "enableProgressBars": true,
+    "enablePerformanceMetrics": true,
+    "logRetentionDays": 30
+  },
+  "Service": {
+    "frequency": "Daily",
+    "updateTime": "02:00",
+    "enabled": true,
+    "taskName": "Universal Package Manager v3.0",
+    "runAsSystem": true,
+    "highestPrivileges": true
+  },
+  "Logging": {
+    "defaultLevel": "Info",
+    "enableJsonLogs": true,
+    "enableConsoleLogs": true,
+    "enableFileRotation": true,
+    "maxLogFiles": 30,
+    "logDirectory": "logs"
+  },
+  "UI": {
+    "progressStyle": "Minimal",
+    "enableEmojis": false,
+    "enableColors": true,
+    "progressMaxWidth": 120
+  },
+  "PackageManagerInstaller": {
+    "defaultPackageManagers": ["all"],
+    "autoAccept": true,
+    "forceReinstall": false,
+    "preferredInstallMethods": {
+      "winget": "store",
+      "nodejs": "winget",
+      "python": "winget",
+      "conda": "winget"
+    }
+  },
+  "PackageManagers": {
+    "choco": {
+      "args": "-y --limit-output",
+      "timeout": 900,
+      "enabled": true
+    },
+    "conda": {
+      "args": "-y --quiet",
+      "timeout": 900,
+      "enabled": true
+    },
+    "winget": {
+      "args": "--accept-source-agreements --accept-package-agreements --silent",
+      "timeout": 600,
+      "enabled": true,
+      "priority": 1,
+      "description": "Microsoft's official package manager"
+    },
+    "pip": {
+      "args": "--quiet",
+      "timeout": 600,
+      "enabled": true
+    },
+    "npm": {
+      "args": "",
+      "timeout": 600,
+      "enabled": true
+    },
+    "scoop": {
+      "args": "",
+      "timeout": 300,
+      "enabled": true
+    }
+  }
+}

@@ -1,0 +1,17 @@
+# Logs
+logs/
+*.log
+*.json.log
+
+# Backups / temp
+backups/
+*.bak
+*.old
+
+# AI / editor folders
+.claude/
+.vscode/
+
+# Windows / PowerShell junk
+Thumbs.db
+Desktop.ini
