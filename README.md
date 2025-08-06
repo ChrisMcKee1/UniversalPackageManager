@@ -286,6 +286,17 @@ A: Run the PackageManagerInstaller.ps1 script to automatically install winget, C
 
 ### Manual Troubleshooting
 
+#### Open Task Scheduler
+
+1. Press the `Windows + R` or open `Run`
+2. Paste
+    ```text
+    taskschd.msc
+    ```
+3. Press Ok then find your task named `Universal Package Manager v3.0`
+
+#### Use Powershell
+
 ```powershell
 # Test individual package managers
 pwsh -File ".\UniversalPackageManager.ps1" -PackageManagers @("winget") -DryRun -LogLevel Debug
