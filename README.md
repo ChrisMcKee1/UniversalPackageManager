@@ -4,6 +4,12 @@ A comprehensive **PowerShell 7+ exclusive** solution that automatically manages 
 
 > **⚠️ Breaking Change**: Version 3.0 requires PowerShell 7.0+ and uses a completely new modular architecture for better maintainability.
 
+## 📥 Download
+
+### [⬇️ Download Latest Release (v3.0.0)](https://github.com/ChrisMcKee1/UniversalPackageManager/releases/download/v3.0.0/UniversalPackageManager_v3.0.0.zip)
+
+**Direct Download**: https://github.com/ChrisMcKee1/UniversalPackageManager/releases/latest
+
 ## 🚀 Overview
 
 The Universal Package Manager (UPM) v3.0 consolidates package management across all major Windows package managers into a single, automated system powered exclusively by PowerShell 7+. It features a **modular architecture** with focused, maintainable components, runs as a scheduled task with full SYSTEM privileges, and includes structured logging with comprehensive error handling.
@@ -85,7 +91,8 @@ C:\ProgramData\UniversalPackageManager\
 
 ### Installation
 
-1. **Download and extract** all files to `C:\ProgramData\UniversalPackageManager\`
+1. **Download the latest release** from [GitHub Releases](https://github.com/ChrisMcKee1/UniversalPackageManager/releases/latest) and extract the ZIP file to `C:\ProgramData\UniversalPackageManager\`
+   - Direct download: [UniversalPackageManager_v3.0.0.zip](https://github.com/ChrisMcKee1/UniversalPackageManager/releases/download/v3.0.0/UniversalPackageManager_v3.0.0.zip)
 
 2. **(Optional) Install missing package managers**:
    ```powershell
