@@ -6,37 +6,7 @@
     "description": "Universal Package Manager v3.0 - PowerShell 7+ Exclusive"
   },
   "Advanced": {
-    "maxRetries": 3,
-    "parallelUpdates": false,
-    "skipFailedPackages": true,
-    "maxParallel": 4,
-    "retryDelay": 30,
-    "enableStructuredLogging": true,
-    "enableProgressBars": true,
-    "enablePerformanceMetrics": true,
     "logRetentionDays": 30
-  },
-  "Service": {
-    "frequency": "Daily",
-    "updateTime": "02:00",
-    "enabled": true,
-    "taskName": "Universal Package Manager v3.0",
-    "runAsSystem": true,
-    "highestPrivileges": true
-  },
-  "Logging": {
-    "defaultLevel": "Info",
-    "enableJsonLogs": true,
-    "enableConsoleLogs": true,
-    "enableFileRotation": true,
-    "maxLogFiles": 30,
-    "logDirectory": "logs"
-  },
-  "UI": {
-    "progressStyle": "Minimal",
-    "enableEmojis": false,
-    "enableColors": true,
-    "progressMaxWidth": 120
   },
   "PackageManagerInstaller": {
     "defaultPackageManagers": ["all"],
@@ -63,9 +33,7 @@
     "winget": {
       "args": "--accept-source-agreements --accept-package-agreements --silent",
       "timeout": 600,
-      "enabled": true,
-      "priority": 1,
-      "description": "Microsoft's official package manager"
+      "enabled": true
     },
     "pip": {
       "args": "--quiet",
