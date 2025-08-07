@@ -18,7 +18,7 @@ If you have 50+ installed programs (typical developer/power user), you save **2-
 
 ## 📥 Download
 
-### [⬇️ Download Latest Release (v3.0.0)](https://github.com/ChrisMcKee1/UniversalPackageManager/releases/download/v3.0.0/UniversalPackageManager_v3.0.0.zip)
+### [⬇️ Download Latest Release (v3.0.0)](https://github.com/ChrisMcKee1/UniversalPackageManager/archive/refs/tags/v3.0.0.zip)
 
 **Direct Download**: https://github.com/ChrisMcKee1/UniversalPackageManager/releases/latest
 
@@ -104,7 +104,7 @@ C:\ProgramData\UniversalPackageManager\
 ### 🎯 Recommended Path (Works with Existing Software)
 
 **Step 1: Download and Extract**
-- Download: [UniversalPackageManager_v3.0.0.zip](https://github.com/ChrisMcKee1/UniversalPackageManager/releases/download/v3.0.0/UniversalPackageManager_v3.0.0.zip)
+- Download: [UniversalPackageManager_v3.0.0.zip](https://github.com/ChrisMcKee1/UniversalPackageManager/archive/refs/tags/v3.0.0.zip)
 - Extract to: `C:\ProgramData\UniversalPackageManager\`
 
 **Step 2: Setup Automatic Updates** (Right-click → "Run as Administrator")
