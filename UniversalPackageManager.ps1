@@ -286,6 +286,13 @@ function Invoke-UpdateOperation {
             "Results" = $results
         }
         
+        # Detailed results for debugging
+        Write-UPMLog -Message "Detailed results:" -Level "Debug" -Component "MAIN"
+        foreach ($result in $results.GetEnumerator()) {
+            $status = if ($result.Value) { "SUCCESS" } else { "FAILED" }
+            Write-UPMLog -Message "$($result.Key): $status" -Level "Debug" -Component "MAIN"
+        }
+        
         if ($failureCount -eq 0) {
             Write-UPMLog -Message "All package managers updated successfully!" -Level "Success" -Component "MAIN"
         } elseif ($successCount -gt 0) {

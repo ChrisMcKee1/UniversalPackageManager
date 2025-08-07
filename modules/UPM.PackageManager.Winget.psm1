@@ -147,13 +147,19 @@ function Update-WingetPackages {
         $result = Invoke-UPMProcess -FilePath "winget" -Arguments $wingetArgs -TimeoutSeconds $TimeoutSeconds -Component "WINGET" -Description "Winget $operation"
         
         # Winget often returns non-zero exit codes even on partial success
-        # Check for specific acceptable exit codes
-        $acceptableExitCodes = @(0, -1978335188)  # 0 = success, -1978335188 = partial success with some failures
-        $isAcceptableResult = $result.Success -or ($acceptableExitCodes -contains $result.ExitCode)
+        # Check for specific exit codes and their meanings
+        $successExitCodes = @(0)  # 0 = complete success
+        $partialSuccessExitCodes = @(-1978335188)  # -1978335188 = partial success with some failures  
+        $knownFailureExitCodes = @(-2145844844)  # -2145844844 = download failure (404 errors, etc.)
+        
+        $isSuccess = $result.Success -or ($successExitCodes -contains $result.ExitCode)
+        $isPartialSuccess = $partialSuccessExitCodes -contains $result.ExitCode
+        $isKnownFailure = $knownFailureExitCodes -contains $result.ExitCode
+        $isAcceptableResult = $isSuccess -or $isPartialSuccess
         
         if ($isAcceptableResult) {
-            $level = if ($result.Success) { "Success" } else { "Warning" }
-            $message = if ($result.Success) { 
+            $level = if ($isSuccess) { "Success" } else { "Warning" }
+            $message = if ($isSuccess) { 
                 "Winget $operation completed successfully" 
             } else { 
                 "Winget $operation completed with some failures (exit code: $($result.ExitCode))" 
@@ -163,6 +169,13 @@ function Update-WingetPackages {
                 "Duration" = $result.Duration.TotalSeconds
                 "ExitCode" = $result.ExitCode
                 "DryRun" = $DryRun.IsPresent
+            }
+        } elseif ($isKnownFailure) {
+            Write-UPMLog -Message "Winget $operation failed with known issue (exit code: $($result.ExitCode)) - likely download/network problem" -Level "Error" -Component "WINGET" -Data @{
+                "Duration" = $result.Duration.TotalSeconds
+                "ExitCode" = $result.ExitCode
+                "TimedOut" = $result.TimedOut
+                "FailureType" = "NetworkDownload"
             }
         } else {
             Write-UPMLog -Message "Winget $operation failed (exit code: $($result.ExitCode))" -Level "Error" -Component "WINGET" -Data @{
@@ -179,6 +192,7 @@ function Update-WingetPackages {
             TimedOut = $result.TimedOut
             Operation = $operation
             PackageManager = "winget"
+            FailureType = if ($isKnownFailure) { "NetworkDownload" } else { $null }
         }
     }
     catch {
