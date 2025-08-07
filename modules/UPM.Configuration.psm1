@@ -22,15 +22,13 @@ $script:DefaultConfig = @{
         "description" = "Universal Package Manager v3.0 - PowerShell 7+ Exclusive"
     }
     "Advanced" = @{
-        "maxRetries" = 3
-        "parallelUpdates" = $false
-        "skipFailedPackages" = $true
-        "maxParallel" = 4
-        "retryDelay" = 30
-        "enableStructuredLogging" = $true
-        "enableProgressBars" = $true
-        "enablePerformanceMetrics" = $true
         "logRetentionDays" = 30
+    }
+    "Logging" = @{
+        "enableEventLog" = $true
+        "enableFileLog" = $true
+        "defaultLogLevel" = "Info"
+        "logRotation" = "daily"
     }
     "Service" = @{
         "frequency" = "Daily"

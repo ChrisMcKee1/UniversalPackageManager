@@ -8,6 +8,12 @@
   "Advanced": {
     "logRetentionDays": 30
   },
+  "Logging": {
+    "enableEventLog": true,
+    "enableFileLog": true,
+    "defaultLogLevel": "Info",
+    "logRotation": "daily"
+  },
   "PackageManagerInstaller": {
     "defaultPackageManagers": ["all"],
     "autoAccept": true,

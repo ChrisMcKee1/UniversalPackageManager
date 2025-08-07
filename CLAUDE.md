@@ -19,7 +19,7 @@ pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1"
 pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -DryRun
 
 # Update only specific package managers
-pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -PackageManagers @("winget", "choco")
+pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -SelectedPackageManagers @("winget", "choco")
 
 # Open configuration editor
 pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -Operation Configure
@@ -58,7 +58,7 @@ Get-ScheduledTask -TaskName "Universal Package Manager" | Get-ScheduledTaskInfo
 Get-Content (Get-ChildItem "C:\ProgramData\UniversalPackageManager\logs\UPM-*.log" | Sort-Object CreationTime | Select-Object -Last 1).FullName -Tail 50
 
 # Test individual package managers
-pwsh -File ".\UniversalPackageManager.ps1" -PackageManagers @("winget") -DryRun -LogLevel Debug
+pwsh -File ".\UniversalPackageManager.ps1" -SelectedPackageManagers @("winget") -DryRun -LogLevel Debug
 ```
 
 ## Architecture
@@ -80,9 +80,9 @@ pwsh -File ".\UniversalPackageManager.ps1" -PackageManagers @("winget") -DryRun 
 3. **config/settings.json** - JSON configuration controlling:
    - Individual package manager enable/disable states
    - Timeout values and command arguments per package manager
-   - Service scheduling (frequency, time)
-   - Advanced settings (retries, parallel execution)
+   - Log retention settings (only logRetentionDays from Advanced section)
    - PackageManagerInstaller behavior and preferences
+   - **Note**: Scheduling is configured via Install-UPM.ps1 parameters, NOT settings.json
 
 4. **PackageManagerInstaller.ps1** - Package manager installer that:
    - Installs missing package managers (winget, Chocolatey, Scoop, Node.js, Python, Miniconda)
@@ -123,12 +123,14 @@ The enhanced `config/settings.json` supports the modular architecture:
 
 #### Configuration Sections
 - **_metadata**: Version and schema information for v3.0
-- **PackageManagers**: Individual manager settings with module-specific configurations
-- **Service**: Scheduling and task configuration
-- **Advanced**: Retry logic, performance settings, error handling
-- **Logging**: Enhanced logging configuration for dual format output
-- **UI**: Display settings (emojis disabled by default)
+- **PackageManagers**: Individual manager settings (enabled, args, timeout)
+- **Advanced**: Only contains logRetentionDays (other settings removed as unused)
 - **PackageManagerInstaller**: Configuration for package manager installation behavior
+
+**Important**: Many configuration sections were removed in recent cleanup:
+- **Service settings** (frequency, updateTime) are configured via Install-UPM.ps1 parameters only
+- **Logging/UI sections** were unused and removed
+- **Advanced settings** reduced to only functional options
 
 #### Features
 - **Automatic Creation**: Generated with sensible defaults if missing
@@ -264,6 +266,27 @@ pwsh -c "Import-Module .\modules\UPM.PackageManager.Conda.psm1; Test-CondaAvaila
 3. **Conda TOS Errors**: Module automatically handles TOS acceptance - verify with debug logging
 4. **Module Isolation**: Test individual modules by importing them directly in PowerShell
 
+### Recent Major Changes (Latest Release)
+
+#### Documentation Accuracy Improvements
+- **Fixed scheduling misinformation**: README previously incorrectly stated editing settings.json changes scheduled task timing
+- **Parameter name corrections**: Fixed `-PackageManagers` to `-SelectedPackageManagers` throughout documentation
+- **Value proposition enhancement**: Added "Why should I care?" section with quantified benefits (2-3 hours/week saved)
+- **Clear setup paths**: Separated recommended (existing software) vs power user (all package managers) installation paths
+
+#### Configuration Cleanup (85% Size Reduction)
+- **Removed unused Advanced settings**: maxRetries, parallelUpdates, skipFailedPackages, etc. (not used by current code)
+- **Removed unused Service settings**: frequency, updateTime (controlled by Install-UPM.ps1 parameters only)
+- **Removed unused Logging/UI sections**: All fields were validated but never used by code
+- **Kept only functional settings**: enabled/args/timeout in PackageManagers, logRetentionDays in Advanced
+- **Documentation now matches reality**: All examples show only settings that actually affect behavior
+
+#### Critical Understanding for Future Development
+- **Scheduling is ONLY via Install-UPM.ps1**: The -UpdateTime and -Frequency parameters create the Windows scheduled task directly
+- **settings.json does NOT control scheduling**: This was a major documentation error that was corrected
+- **Configuration validation vs usage gap**: Many settings were validated by UPM.Configuration.psm1 but never used by main script
+- **Parameter naming**: Use `-SelectedPackageManagers` in scripts, `-PackageManagers` for PackageManagerInstaller.ps1 only
+
 ### Development Guidelines
 - Each module should be 50-80 lines maximum
 - All modules must export consistent interfaces
@@ -275,3 +298,5 @@ pwsh -c "Import-Module .\modules\UPM.PackageManager.Conda.psm1; Test-CondaAvaila
 - Always use Debug level for verbose logging, Info level for user-visible progress
 - PATH operations must include backup/restore capability
 - Never break existing PATH - validate before applying changes
+- **Always verify configuration settings are actually used before documenting them**
+- **Keep documentation accuracy as highest priority** - user trust depends on it

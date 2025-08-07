@@ -125,20 +125,23 @@ function Initialize-UPM {
         # Determine configuration path
         $configPath = if ($ConfigPath) { $ConfigPath } else { $script:DefaultConfigPath }
         
-        # Initialize logging
+        # Initialize configuration first to get logging settings
+        $config = Initialize-UPMConfiguration -ConfigPath $configPath -CreateIfMissing
+        
+        # Use configured log level if not specified via parameter
+        $effectiveLogLevel = if ($PSBoundParameters.ContainsKey('LogLevel')) { $LogLevel } else { $config.Logging.defaultLogLevel }
+        
+        # Initialize logging with configuration values
         $logDir = Join-Path $script:BaseDir "logs"
-        Initialize-UPMLogging -LogDirectory $logDir -LogLevel $LogLevel -EnableJsonLogs $true -EnableConsoleLogs (-not $Silent)
+        Initialize-UPMLogging -LogDirectory $logDir -LogLevel $effectiveLogLevel -EnableEventLog $config.Logging.enableEventLog -EnableFileLog $config.Logging.enableFileLog -EnableConsoleLogs (-not $Silent)
         
         Write-UPMLog -Message "Universal Package Manager v3.0 starting" -Level "Info" -Component "MAIN" -Data @{
             "PowerShellVersion" = $PSVersionTable.PSVersion.ToString()
             "Operation" = $Operation
             "DryRun" = $DryRun.IsPresent
-            "LogLevel" = $LogLevel
+            "LogLevel" = $effectiveLogLevel
             "ConfigPath" = $configPath
         }
-        
-        # Initialize configuration
-        $config = Initialize-UPMConfiguration -ConfigPath $configPath -CreateIfMissing
         
         # Clean up old logs
         Remove-OldLogFiles -RetentionDays $config.Advanced.logRetentionDays

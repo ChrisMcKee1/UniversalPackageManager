@@ -13,9 +13,12 @@
 # Global module variables
 $script:LogDirectory = $null
 $script:LogLevel = "Info"
-$script:EnableJsonLogs = $true
+$script:EnableEventLog = $true
+$script:EnableFileLog = $true
 $script:EnableConsoleLogs = $true
+$script:EventSource = "UniversalPackageManager"
 $script:SessionId = [guid]::NewGuid().ToString("N")[0..7] -join ""
+$script:CurrentLogFile = $null
 
 # Log levels with numeric values for filtering
 $script:LogLevels = @{
@@ -29,13 +32,15 @@ $script:LogLevels = @{
 function Initialize-UPMLogging {
     <#
     .SYNOPSIS
-        Initialize the logging system
+        Initialize the logging system with Windows Event Log and file logging
     .PARAMETER LogDirectory
         Directory path for log files
     .PARAMETER LogLevel
         Minimum log level to output
-    .PARAMETER EnableJsonLogs
-        Enable JSON structured logging
+    .PARAMETER EnableEventLog
+        Enable Windows Event Log logging
+    .PARAMETER EnableFileLog
+        Enable file logging
     .PARAMETER EnableConsoleLogs
         Enable console output
     #>
@@ -49,7 +54,10 @@ function Initialize-UPMLogging {
         [string]$LogLevel = "Info",
         
         [Parameter(Mandatory = $false)]
-        [bool]$EnableJsonLogs = $true,
+        [bool]$EnableEventLog = $true,
+        
+        [Parameter(Mandatory = $false)]
+        [bool]$EnableFileLog = $true,
         
         [Parameter(Mandatory = $false)]
         [bool]$EnableConsoleLogs = $true
@@ -57,15 +65,26 @@ function Initialize-UPMLogging {
     
     $script:LogDirectory = $LogDirectory
     $script:LogLevel = $LogLevel
-    $script:EnableJsonLogs = $EnableJsonLogs
+    $script:EnableEventLog = $EnableEventLog
+    $script:EnableFileLog = $EnableFileLog
     $script:EnableConsoleLogs = $EnableConsoleLogs
     
-    # Ensure log directory exists
-    if (-not (Test-Path -Path $LogDirectory)) {
-        New-Item -Path $LogDirectory -ItemType Directory -Force | Out-Null
+    # Initialize Windows Event Log source
+    if ($EnableEventLog) {
+        Initialize-EventLogSource
     }
     
-    Write-UPMLog -Message "Logging system initialized" -Level "Info" -Component "LOGGING"
+    # Ensure log directory exists and set up daily log file
+    if ($EnableFileLog) {
+        if (-not (Test-Path -Path $LogDirectory)) {
+            New-Item -Path $LogDirectory -ItemType Directory -Force | Out-Null
+        }
+        
+        $dateString = Get-Date -Format "yyyyMMdd"
+        $script:CurrentLogFile = Join-Path $LogDirectory "UPM-$dateString.log"
+    }
+    
+    Write-UPMLog -Message "Logging system initialized (EventLog: $EnableEventLog, FileLog: $EnableFileLog)" -Level "Info" -Component "LOGGING"
 }
 
 function Write-UPMLog {
@@ -112,18 +131,18 @@ function Write-UPMLog {
         Level = $Level
         Message = $Message
         Component = $Component
-        ProcessId = $processId
-        ThreadId = $threadId
         SessionId = $script:SessionId
         Data = $Data
-        MachineName = $env:COMPUTERNAME
-        UserName = $env:USERNAME
-        PSVersion = $PSVersionTable.PSVersion.ToString()
     }
     
-    # Write to JSON log file
-    if ($script:EnableJsonLogs -and $script:LogDirectory) {
-        Write-JsonLog -LogEntry $logEntry
+    # Write to Windows Event Log
+    if ($script:EnableEventLog) {
+        Write-EventLogEntry -LogEntry $logEntry
+    }
+    
+    # Write to file log
+    if ($script:EnableFileLog -and $script:CurrentLogFile) {
+        Write-FileLogEntry -LogEntry $logEntry
     }
     
     # Write to console with colors
@@ -132,10 +151,33 @@ function Write-UPMLog {
     }
 }
 
-function Write-JsonLog {
+function Initialize-EventLogSource {
     <#
     .SYNOPSIS
-        Write structured log entry to JSON file
+        Initialize Windows Event Log source for UPM
+    #>
+    [CmdletBinding()]
+    param()
+    
+    try {
+        # Check if running as administrator (required for event source creation)
+        $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+        $isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        
+        if ($isAdmin -and -not [System.Diagnostics.EventLog]::SourceExists($script:EventSource)) {
+            [System.Diagnostics.EventLog]::CreateEventSource($script:EventSource, "Application")
+        }
+    }
+    catch {
+        # Silently fail if we can't create the event source
+        $script:EnableEventLog = $false
+    }
+}
+
+function Write-EventLogEntry {
+    <#
+    .SYNOPSIS
+        Write log entry to Windows Event Log
     #>
     [CmdletBinding()]
     param(
@@ -143,21 +185,64 @@ function Write-JsonLog {
         [hashtable]$LogEntry
     )
     
-    if (-not $script:LogDirectory) {
-        return
-    }
-    
-    $dateString = Get-Date -Format "yyyyMMdd-HHmmss"
-    $jsonLogFile = Join-Path $script:LogDirectory "UPM-$dateString.json.log"
-    
     try {
-        $jsonString = $LogEntry | ConvertTo-Json -Depth 10 -Compress
-        Add-Content -Path $jsonLogFile -Value $jsonString -Encoding UTF8
+        $eventType = switch ($LogEntry.Level) {
+            "Error"   { "Error" }
+            "Warning" { "Warning" }
+            "Success" { "Information" }
+            "Info"    { "Information" }
+            "Debug"   { "Information" }
+            default   { "Information" }
+        }
+        
+        $eventId = switch ($LogEntry.Level) {
+            "Error"   { 1001 }
+            "Warning" { 1002 }
+            "Success" { 1003 }
+            "Info"    { 1004 }
+            "Debug"   { 1005 }
+            default   { 1000 }
+        }
+        
+        $message = "[$($LogEntry.Component)] $($LogEntry.Message)"
+        if ($LogEntry.Data.Count -gt 0) {
+            $dataString = ($LogEntry.Data.GetEnumerator() | ForEach-Object { "$($_.Key): $($_.Value)" }) -join ", "
+            $message += "`nData: $dataString"
+        }
+        
+        Write-EventLog -LogName "Application" -Source $script:EventSource -EventId $eventId -EntryType $eventType -Message $message
     }
     catch {
-        # Fallback to simple logging if JSON fails
-        $simpleMessage = "$($LogEntry.Timestamp) [$($LogEntry.Level)] $($LogEntry.Message)"
-        Add-Content -Path $jsonLogFile -Value $simpleMessage -Encoding UTF8
+        # Silently fail if we can't write to event log
+    }
+}
+
+function Write-FileLogEntry {
+    <#
+    .SYNOPSIS
+        Write log entry to file in standard format
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$LogEntry
+    )
+    
+    try {
+        $levelPadded = $LogEntry.Level.PadRight(7)
+        $componentPadded = $LogEntry.Component.PadRight(10)
+        $logLine = "$($LogEntry.Timestamp) [$levelPadded] [$componentPadded] $($LogEntry.Message)"
+        
+        # Add data if present and level is Debug
+        if ($LogEntry.Data.Count -gt 0 -and $LogEntry.Level -eq "Debug") {
+            $dataString = ($LogEntry.Data.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join " "
+            $logLine += " | Data: $dataString"
+        }
+        
+        Add-Content -Path $script:CurrentLogFile -Value $logLine -Encoding UTF8
+    }
+    catch {
+        # Silently fail if we can't write to file
     }
 }
 
@@ -277,10 +362,13 @@ function Remove-OldLogFiles {
     }
     
     $cutoffDate = (Get-Date).AddDays(-$RetentionDays)
+    # Clean up both old log formats
     $logFiles = Get-ChildItem -Path $script:LogDirectory -Filter "UPM-*.log" -File
+    $oldJsonFiles = Get-ChildItem -Path $script:LogDirectory -Filter "UPM-*.json.log" -File
+    $allFiles = $logFiles + $oldJsonFiles
     $removedCount = 0
     
-    foreach ($logFile in $logFiles) {
+    foreach ($logFile in $allFiles) {
         if ($logFile.CreationTime -lt $cutoffDate) {
             try {
                 Remove-Item -Path $logFile.FullName -Force
