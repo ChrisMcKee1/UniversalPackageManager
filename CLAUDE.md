@@ -168,6 +168,42 @@ The `PackageManagerInstaller` section controls the behavior of the PackageManage
 
 ## Development Notes
 
+### Critical Implementation Details
+
+#### PATH Management Safety System
+- **Backup System**: All PATH modifications create automatic backups with unique IDs
+- **Integrity Validation**: User PATH vs Machine PATH have different validation rules
+- **Rollback Capability**: Automatic restoration on failures, manual recovery via `scripts/Restore-PathBackup.ps1`
+- **Search Paths**: Package managers use fallback search in common installation locations
+- **Session vs Permanent**: Both current session and registry PATH are updated
+
+#### Logging Level Management
+- **Default (Info)**: Shows essential progress and results only
+- **Debug**: Enables detailed troubleshooting output (use `-LogLevel Debug`)
+- **Warning/Error**: Minimal output for automation scenarios
+- **Key Principle**: Most verbose messages should use Debug level, not Info
+
+#### Package Manager Specific Issues
+
+**Conda**: 
+- Fresh installs require Terms of Service acceptance for non-interactive operation
+- Automatically accepts TOS for main Anaconda channels and configures `always_yes = true`
+- PATH detection includes both Miniconda and Anaconda installation paths
+
+**Pip**: 
+- No native "upgrade all" command - currently lists outdated packages only
+- Removed invalid `--format=freeze` with `--outdated` combination
+
+**Winget**: 
+- Exit code -1978335188 indicates partial success (some packages failed, some succeeded)
+- Teams installation conflicts are common and should be treated as warnings, not failures
+
+#### Error Handling Patterns
+- Each module must handle its own failures without affecting other package managers
+- Use structured logging with component-specific tags
+- PATH operations must never break the system - always validate before applying
+- Conda operations must handle TOS acceptance silently
+
 ### Version 3.0 Changes (Modular Architecture)
 
 #### Breaking Changes
@@ -178,11 +214,12 @@ The `PackageManagerInstaller` section controls the behavior of the PackageManage
 
 #### New Features
 - **10 Focused Modules**: Each 50-80 lines instead of one 2000+ line script
-- **PackageManagerInstaller.ps1**: Dedicated script for installing missing package managers
+- **PackageManagerInstaller.ps1**: Dedicated script for installing missing package managers with robust PATH handling
 - **Dual Log Format**: Human-readable (.log) and structured JSON (.json.log) logs
 - **Enhanced Error Handling**: Module-specific isolation with comprehensive try/catch blocks
 - **Consistent Interface**: All package manager modules follow the same patterns
 - **Better Testing**: Individual modules can be tested and debugged independently
+- **PATH Safety**: Comprehensive backup/restore system for environment variable modifications
 
 #### Technical Implementation
 - **Module System**: Uses PowerShell's module system with proper exports
@@ -190,6 +227,7 @@ The `PackageManagerInstaller` section controls the behavior of the PackageManage
 - **Performance Tracking**: Detailed timing and metrics for each module
 - **Configuration Validation**: Enhanced JSON schema validation with defaults merging
 - **Modern PowerShell**: Leverages PowerShell 7+ features like $PSStyle and TimeoutSec
+- **Safe PATH Operations**: All environment modifications are backed up and validated
 
 ### File Structure
 ```
@@ -203,6 +241,29 @@ C:\ProgramData\UniversalPackageManager\
 └── logs\                           # Dual format logs
 ```
 
+## Testing and Debugging
+
+### Testing Individual Components
+```powershell
+# Test specific package managers
+pwsh -File "UniversalPackageManager.ps1" -SelectedPackageManagers @("conda") -DryRun -LogLevel Debug
+
+# Test PATH operations safely
+pwsh -File "PackageManagerInstaller.ps1" -PackageManagers @("conda") -SkipConfirmation
+
+# Verify PATH backup system
+dir backups\PATH-backup-*.json
+
+# Test conda TOS handling specifically
+pwsh -c "Import-Module .\modules\UPM.PackageManager.Conda.psm1; Test-CondaAvailable"
+```
+
+### Common Debugging Workflows
+1. **PATH Issues**: Check `backups\` directory for recovery files, use `scripts\Restore-PathBackup.ps1`
+2. **Package Manager Failures**: Run with `-LogLevel Debug` and check both `.log` and `.json.log` files
+3. **Conda TOS Errors**: Module automatically handles TOS acceptance - verify with debug logging
+4. **Module Isolation**: Test individual modules by importing them directly in PowerShell
+
 ### Development Guidelines
 - Each module should be 50-80 lines maximum
 - All modules must export consistent interfaces
@@ -211,3 +272,6 @@ C:\ProgramData\UniversalPackageManager\
 - Follow PowerShell 7+ best practices
 - Include comprehensive help documentation
 - Test individual modules independently
+- Always use Debug level for verbose logging, Info level for user-visible progress
+- PATH operations must include backup/restore capability
+- Never break existing PATH - validate before applying changes

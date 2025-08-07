@@ -126,7 +126,7 @@ pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1"
 pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -DryRun
 
 # Update only specific package managers
-pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -PackageManagers @("winget", "choco")
+pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -SelectedPackageManagers @("winget", "choco")
 
 # Open configuration editor
 pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -Operation Configure
@@ -175,11 +175,14 @@ Edit `config\settings.json` to customize behavior:
 {
   "Service": {
     "enabled": true,
-    "updateTime": "02:00",
-    "frequency": "Daily"
+    "taskName": "Universal Package Manager v3.0",
+    "runAsSystem": true,
+    "highestPrivileges": true
   }
 }
 ```
+
+> **Note**: Scheduling settings (`updateTime`, `frequency`) must be configured during installation using Install-UPM.ps1 parameters, not through settings.json.
 
 ### Advanced Settings (v3.0)
 ```json
@@ -239,8 +242,10 @@ Edit `config\settings.json` to customize behavior:
 | `maxRetries` | Number of retry attempts | `3` | Any positive integer |
 | `retryDelay` | Delay between retries (seconds) | `30` | Any positive integer |
 | `skipFailedPackages` | Continue if a package manager fails | `true` | `true`, `false` |
-| `updateTime` | Daily update time | `"02:00"` | `"HH:MM"` format |
-| `frequency` | Update frequency | `"Daily"` | `"Daily"`, `"Weekly"` |
+| `enabled` | Enable/disable the service | `true` | `true`, `false` |
+| `taskName` | Windows scheduled task name | `"Universal Package Manager v3.0"` | Any valid task name |
+| `runAsSystem` | Run task as SYSTEM account | `true` | `true`, `false` |
+| `highestPrivileges` | Use highest execution privileges | `true` | `true`, `false` |
 
 ## 📝 Enhanced Logging (v3.0)
 
@@ -276,7 +281,7 @@ A: Use the PackageManagerInstaller.ps1 script to install missing package manager
 A: The installer always performs a clean reinstall. Run Install-UPM.ps1 again to ensure proper configuration.
 
 **Q: Want to change the update schedule**  
-A: Edit `config\settings.json` or use the Task Scheduler (`taskschd.msc`) to modify the "Universal Package Manager v3.0" task.
+A: Rerun the Install-UPM.ps1 script with new `-UpdateTime` and `-Frequency` parameters, or use the Task Scheduler (`taskschd.msc`) to modify the "Universal Package Manager v3.0" task directly.
 
 **Q: Need to see what's happening during updates**  
 A: Check both the human-readable (.log) and JSON (.json.log) files in the `logs\` folder, or run manually with `-LogLevel Debug`.
@@ -299,7 +304,7 @@ A: Run the PackageManagerInstaller.ps1 script to automatically install winget, C
 
 ```powershell
 # Test individual package managers
-pwsh -File ".\UniversalPackageManager.ps1" -PackageManagers @("winget") -DryRun -LogLevel Debug
+pwsh -File ".\UniversalPackageManager.ps1" -SelectedPackageManagers @("winget") -DryRun -LogLevel Debug
 
 # Check system status
 pwsh -File ".\UniversalPackageManager.ps1" -Operation Status
