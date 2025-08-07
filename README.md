@@ -18,7 +18,7 @@ If you have 50+ installed programs (typical developer/power user), you save **2-
 
 ## 📥 Download
 
-### [⬇️ Download Latest Release (v3.0.0)](https://github.com/ChrisMcKee1/UniversalPackageManager/archive/refs/tags/v3.0.0.zip)
+### [⬇️ Download Latest Release (v3.0.1)](https://github.com/ChrisMcKee1/UniversalPackageManager/archive/refs/tags/v3.0.1.zip)
 
 **Direct Download**: https://github.com/ChrisMcKee1/UniversalPackageManager/releases/latest
 
@@ -41,6 +41,15 @@ The Universal Package Manager (UPM) v3.0 consolidates package management across 
 - **🛠️ Package Manager Installer**: Dedicated script to install/upgrade missing package managers
 - **🔄 Clean Reinstall**: Installation script always performs clean reinstalls for reliability
 - **✅ Emoji-Free**: Resolved all Unicode compatibility issues for better reliability
+
+## 🆕 What's New in v3.0.1
+
+### 📝 Logging Improvements
+- **🪟 Windows Event Log Integration**: Follows Microsoft best practices for scheduled task services
+- **📅 Daily Log Rotation**: Replaces excessive per-execution JSON files with single daily logs
+- **⚙️ Configurable Logging**: New `Logging` section in settings.json for Event Log and file logging control
+- **🧹 Cleaner File System**: No more hundreds of small log files cluttering the logs directory
+- **📊 Proper Service Logging**: Uses standard Windows Event Log with appropriate event IDs and types
 
 ## 📦 Supported Package Managers
 
@@ -104,7 +113,7 @@ C:\ProgramData\UniversalPackageManager\
 ### 🎯 Recommended Path (Works with Existing Software)
 
 **Step 1: Download and Extract**
-- Download: [UniversalPackageManager_v3.0.0.zip](https://github.com/ChrisMcKee1/UniversalPackageManager/archive/refs/tags/v3.0.0.zip)
+- Download: [UniversalPackageManager_v3.0.1.zip](https://github.com/ChrisMcKee1/UniversalPackageManager/archive/refs/tags/v3.0.1.zip)
 - Extract to: `C:\ProgramData\UniversalPackageManager\`
 
 **Step 2: Setup Automatic Updates** (Right-click → "Run as Administrator")
@@ -139,22 +148,22 @@ pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\Insta
 
 ```powershell
 # 🚀 Run immediate update of all packages (great for testing)
-pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1"
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1"
 
 # 🔍 See what would be updated without making changes (safe to run anytime)  
-pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -DryRun
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -DryRun
 
 # 🎯 Update only specific package managers (when you have issues with one)
-pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -SelectedPackageManagers @("winget", "choco")
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -SelectedPackageManagers @("winget", "choco")
 
 # ⚙️ Open configuration editor (customize settings)
-pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -Operation Configure
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -Operation Configure
 
 # 🔍 Check system status (see what's installed and working)
-pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -Operation Status
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -Operation Status
 
 # 🐛 Troubleshoot issues with detailed logging
-pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -LogLevel Debug
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -LogLevel Debug
 ```
 
 ### 💡 Real-World Scenarios
@@ -162,10 +171,10 @@ pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" 
 **Scenario 1: New Developer Machine Setup**
 ```powershell
 # Install all development tools and package managers
-.\PackageManagerInstaller.ps1 -Force
+pwsh -ExecutionPolicy Bypass -File ".\PackageManagerInstaller.ps1" -Force
 
 # Set up automated updates
-.\Install-UPM.ps1
+pwsh -ExecutionPolicy Bypass -File ".\Install-UPM.ps1"
 
 # Result: Full development environment with automatic maintenance
 ```
@@ -173,19 +182,19 @@ pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" 
 **Scenario 2: Maintenance Window Testing**  
 ```powershell
 # See what updates are available before maintenance window
-.\UniversalPackageManager.ps1 -DryRun
+pwsh -ExecutionPolicy Bypass -File ".\UniversalPackageManager.ps1" -DryRun
 
 # During maintenance window, update everything
-.\UniversalPackageManager.ps1
+pwsh -ExecutionPolicy Bypass -File ".\UniversalPackageManager.ps1"
 
 # Check for any failures
-.\UniversalPackageManager.ps1 -Operation Status
+pwsh -ExecutionPolicy Bypass -File ".\UniversalPackageManager.ps1" -Operation Status
 ```
 
 **Scenario 3: Troubleshooting Package Manager Issues**
 ```powershell
 # Test specific package manager that's having problems
-.\UniversalPackageManager.ps1 -SelectedPackageManagers @("conda") -DryRun -LogLevel Debug
+pwsh -ExecutionPolicy Bypass -File ".\UniversalPackageManager.ps1" -SelectedPackageManagers @("conda") -DryRun -LogLevel Debug
 
 # View recent logs
 Get-Content .\logs\UPM-*.log | Select-Object -Last 50
@@ -196,25 +205,25 @@ Get-Content .\logs\UPM-*.log | Select-Object -Last 50
 **Custom Update Schedule**
 ```powershell
 # Run updates weekly on Sunday at 3:30 AM instead of daily
-.\Install-UPM.ps1 -Frequency Weekly -UpdateTime "03:30"
+pwsh -ExecutionPolicy Bypass -File ".\Install-UPM.ps1" -Frequency Weekly -UpdateTime "03:30"
 
 # Run updates daily at 6:00 PM (good for always-on workstations)  
-.\Install-UPM.ps1 -Frequency Daily -UpdateTime "18:00"
+pwsh -ExecutionPolicy Bypass -File ".\Install-UPM.ps1" -Frequency Daily -UpdateTime "18:00"
 ```
 
 **Package Manager Installation Flexibility**
 ```powershell
 # Install everything automatically (recommended for new machines)
-.\PackageManagerInstaller.ps1                                    
+pwsh -ExecutionPolicy Bypass -File ".\PackageManagerInstaller.ps1"                                    
 
 # Install only specific package managers with confirmation prompts
-.\PackageManagerInstaller.ps1 -PackageManagers @("choco", "scoop")  
+pwsh -ExecutionPolicy Bypass -File ".\PackageManagerInstaller.ps1" -PackageManagers @("choco", "scoop")  
 
 # Force clean reinstall of everything (good for fixing corrupted installations)
-.\PackageManagerInstaller.ps1 -Force -SkipConfirmation          
+pwsh -ExecutionPolicy Bypass -File ".\PackageManagerInstaller.ps1" -Force -SkipConfirmation          
 
 # Fix specific package manager installation
-.\PackageManagerInstaller.ps1 -PackageManagers @("conda") -Force   
+pwsh -ExecutionPolicy Bypass -File ".\PackageManagerInstaller.ps1" -PackageManagers @("conda") -Force   
 ```
 
 **What Each Package Manager Gives You:**
@@ -356,13 +365,13 @@ A: Run the PackageManagerInstaller.ps1 script to automatically install winget, C
 
 ```powershell
 # Test individual package managers
-pwsh -File ".\UniversalPackageManager.ps1" -SelectedPackageManagers @("winget") -DryRun -LogLevel Debug
+pwsh -ExecutionPolicy Bypass -File ".\UniversalPackageManager.ps1" -SelectedPackageManagers @("winget") -DryRun -LogLevel Debug
 
 # Check system status
-pwsh -File ".\UniversalPackageManager.ps1" -Operation Status
+pwsh -ExecutionPolicy Bypass -File ".\UniversalPackageManager.ps1" -Operation Status
 
 # Install missing package managers
-pwsh -File ".\PackageManagerInstaller.ps1" -PackageManagers @("choco", "scoop")
+pwsh -ExecutionPolicy Bypass -File ".\PackageManagerInstaller.ps1" -PackageManagers @("choco", "scoop")
 
 # View recent log entries (human-readable)
 Get-Content (Get-ChildItem .\logs\UPM-*.log | Sort-Object CreationTime | Select-Object -Last 1).FullName -Tail 50
