@@ -38,14 +38,6 @@ $script:DefaultConfig = @{
         "runAsSystem" = $true
         "highestPrivileges" = $true
     }
-    "Logging" = @{
-        "defaultLevel" = "Info"
-        "enableJsonLogs" = $true
-        "enableConsoleLogs" = $true
-        "enableFileRotation" = $true
-        "maxLogFiles" = 30
-        "logDirectory" = "logs"
-    }
     "UI" = @{
         "progressStyle" = "Minimal"
         "enableEmojis" = $false  # Disabled for compatibility

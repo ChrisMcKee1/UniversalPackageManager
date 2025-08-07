@@ -3,9 +3,9 @@
 
 <#
 .SYNOPSIS
-    Universal Package Manager v3.0 Installation Script
+    Universal Package Manager v3.0.1 Installation Script
 .DESCRIPTION
-    Installs and configures the Universal Package Manager v3.0 as a Windows scheduled task
+    Installs and configures the Universal Package Manager v3.0.1 as a Windows scheduled task
     with automatic package updates using PowerShell 7+ exclusive features.
     Always performs a clean reinstall by removing existing tasks first.
 .PARAMETER UpdateTime
@@ -13,7 +13,7 @@
 .PARAMETER Frequency
     Update frequency (Daily or Weekly)
 .NOTES
-    Version: 3.0
+    Version: 3.0.1
     Requires: Administrator privileges and PowerShell 7.0+
     This script always performs a clean reinstall
 #>
@@ -36,7 +36,7 @@ $ProgressPreference = 'SilentlyContinue'
 $BaseDir = "C:\ProgramData\UniversalPackageManager"
 $ScriptPath = Join-Path $BaseDir "UniversalPackageManager.ps1"
 
-Write-Host "Universal Package Manager v3.0 Installation" -ForegroundColor Cyan
+Write-Host "Universal Package Manager v3.0.1 Installation" -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -270,7 +270,7 @@ try {
         Write-Host "   Config: $BaseDir\config\settings.json"
         Write-Host "   PowerShell: $pwshPath (v$detectedVersion)"
         Write-Host "   Run Level: SYSTEM with Highest Privileges"
-        Write-Host "   Version: 3.0 (PowerShell 7+ Exclusive)"
+        Write-Host "   Version: 3.0.1 (PowerShell 7+ Exclusive)"
         Write-Host ""
         
         Write-Host "Usage Examples:" -ForegroundColor Cyan
@@ -326,5 +326,5 @@ catch {
 }
 
 Write-Host ""
-Write-InstallLog "Universal Package Manager v3.0 installation process complete!" -Level "Success"
+Write-InstallLog "Universal Package Manager v3.0.1 installation process complete!" -Level "Success"
 Write-InstallLog "The Universal Package Manager will run with full SYSTEM privileges" -Level "Success"
