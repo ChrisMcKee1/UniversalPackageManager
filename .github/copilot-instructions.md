@@ -96,14 +96,14 @@ In `UniversalPackageManager.ps1`, the `$script:PackageManagerFunctions` hashtabl
 
 ## Breaking Changes in v3.0
 - Removed Windows PowerShell 5.1 support (was monolithic `UniversalPackageManager-old.ps1`)
-- Scheduled task renamed from "Universal Package Manager" to "Universal Package Manager v3.0"
+- Scheduled task name changed to "Universal Package Manager" (version-agnostic as of v3.0.2)
 - Configuration schema updated (added `Logging` section in v3.0.1)
 - All scripts require `#Requires -RunAsAdministrator` for privilege elevation
 
 ## Testing & Debugging
 ```powershell
 # Check scheduled task status
-Get-ScheduledTask -TaskName "Universal Package Manager v3.0" | Get-ScheduledTaskInfo
+Get-ScheduledTask -TaskName "Universal Package Manager" | Get-ScheduledTaskInfo
 
 # View recent logs (file-based)
 Get-Content (Get-ChildItem "logs\UPM-*.log" | Sort-Object CreationTime | Select-Object -Last 1).FullName -Tail 50

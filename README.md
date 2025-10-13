@@ -1,8 +1,8 @@
-﻿# Universal Package Manager v3.0 🚀
+﻿# Universal Package Manager v3.0.2 🚀
 
 ## ⚡ Why Should I Care?
 
-**Stop manually updating software forever.** UPM v3.0 automatically keeps ALL your Windows software up-to-date across **6 different package managers** - set it up once, forget about it forever.
+**Stop manually updating software forever.** UPM v3.0.2 automatically keeps ALL your Windows software up-to-date across **6 different package managers** - set it up once, forget about it forever.
 
 ### 🎯 What This Does For You:
 - **⏰ Saves Hours**: No more manual software updates - runs automatically daily at 2 AM
@@ -18,19 +18,19 @@ If you have 50+ installed programs (typical developer/power user), you save **2-
 
 ## 📥 Download
 
-### [⬇️ Download Latest Release (v3.0.1)](https://github.com/ChrisMcKee1/UniversalPackageManager/archive/refs/tags/v3.0.1.zip)
+### [⬇️ Download Latest Release (v3.0.2)](https://github.com/ChrisMcKee1/UniversalPackageManager/archive/refs/tags/v3.0.2.zip)
 
 **Direct Download**: https://github.com/ChrisMcKee1/UniversalPackageManager/releases/latest
 
 ## 🚀 Overview
 
-The Universal Package Manager (UPM) v3.0 consolidates package management across all major Windows package managers into a single, automated system powered exclusively by PowerShell 7+. It features a **modular architecture** with focused, maintainable components, runs as a scheduled task with full SYSTEM privileges, and includes structured logging with comprehensive error handling.
+The Universal Package Manager (UPM) v3.0.2 consolidates package management across all major Windows package managers into a single, automated system powered exclusively by PowerShell 7+. It features a **modular architecture** with focused, maintainable components, runs as a scheduled task with full SYSTEM privileges, and includes structured logging with comprehensive error handling.
 
 ## 🆕 What's New in v3.0
 
 ### 🔥 Breaking Changes
 - **PowerShell 7.0+ Required**: No longer compatible with Windows PowerShell 5.1
-- **Scheduled Task Renamed**: Now "Universal Package Manager v3.0" (auto-upgraded during install)
+- **Scheduled Task Name**: Now "Universal Package Manager" (version-agnostic, use Migrate-TaskName.ps1 to upgrade from v3.0.x)
 
 ### ✨ New Features
 - **🏗️ Modular Architecture**: Organized into focused modules (~50-80 lines each) for better maintainability
@@ -42,14 +42,24 @@ The Universal Package Manager (UPM) v3.0 consolidates package management across 
 - **🔄 Clean Reinstall**: Installation script always performs clean reinstalls for reliability
 - **✅ Emoji-Free**: Resolved all Unicode compatibility issues for better reliability
 
-## 🆕 What's New in v3.0.1
+## 🆕 What's New in v3.0.2
 
-### 📝 Logging Improvements
-- **🪟 Windows Event Log Integration**: Follows Microsoft best practices for scheduled task services
-- **📅 Daily Log Rotation**: Replaces excessive per-execution JSON files with single daily logs
-- **⚙️ Configurable Logging**: New `Logging` section in settings.json for Event Log and file logging control
-- **🧹 Cleaner File System**: No more hundreds of small log files cluttering the logs directory
-- **📊 Proper Service Logging**: Uses standard Windows Event Log with appropriate event IDs and types
+### � System-Wide Package Manager Support (5/6 Working!)
+- **✅ System-wide installations**: All package managers now installed with `--scope machine` for SYSTEM account access
+- **✅ Fixed npm detection**: Special `.cmd` file handling prevents "not a valid Win32 application" error
+- **✅ Fixed Conda CVE-2022-26526**: Proper security-compliant installation without `/AddToPath=1` parameter
+- **✅ Well-known path fallbacks**: Winget, Pip, and Conda modules search system-wide locations when not in PATH
+- **✅ Version-agnostic task name**: Scheduled task now named "Universal Package Manager" (no version number)
+- **✅ Event Log initialization fix**: Checks if source exists before writing to prevent errors
+- **⚠️ Scoop user-only**: Scoop remains user-scoped by design (can't work in SYSTEM context)
+
+**Status**: 5 of 6 package managers fully working in SYSTEM context (83% coverage)
+
+### 📋 Upgrading from v3.0.x
+If upgrading from v3.0.0 or v3.0.1, run this **once** to rename your scheduled task:
+```powershell
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\Migrate-TaskName.ps1"
+```
 
 ## 📦 Supported Package Managers
 
@@ -261,7 +271,7 @@ Edit `config\settings.json` to customize behavior:
 {
   "Service": {
     "enabled": true,
-    "taskName": "Universal Package Manager v3.0",
+    "taskName": "Universal Package Manager",
     "runAsSystem": true,
     "highestPrivileges": true
   }
@@ -342,7 +352,7 @@ A: Use the PackageManagerInstaller.ps1 script to install missing package manager
 A: The installer always performs a clean reinstall. Run Install-UPM.ps1 again to ensure proper configuration.
 
 **Q: Want to change the update schedule**  
-A: Rerun the Install-UPM.ps1 script with new `-UpdateTime` and `-Frequency` parameters, or use the Task Scheduler (`taskschd.msc`) to modify the "Universal Package Manager v3.0" task directly.
+A: Rerun the Install-UPM.ps1 script with new `-UpdateTime` and `-Frequency` parameters, or use the Task Scheduler (`taskschd.msc`) to modify the "Universal Package Manager" task directly.
 
 **Q: Need to see what's happening during updates**  
 A: Check both the human-readable (.log) and JSON (.json.log) files in the `logs\` folder, or run manually with `-LogLevel Debug`.
@@ -359,7 +369,7 @@ A: Run the PackageManagerInstaller.ps1 script to automatically install winget, C
     ```text
     taskschd.msc
     ```
-3. Press Ok then find your task named `Universal Package Manager v3.0`
+3. Press Ok then find your task named `Universal Package Manager`
 
 #### Use Powershell
 
@@ -379,8 +389,8 @@ Get-Content (Get-ChildItem .\logs\UPM-*.log | Sort-Object CreationTime | Select-
 # View structured JSON logs
 Get-Content (Get-ChildItem .\logs\UPM-*.json.log | Sort-Object CreationTime | Select-Object -Last 1).FullName -Tail 10 | ConvertFrom-Json
 
-# Check scheduled task status (v3.0)
-Get-ScheduledTask -TaskName "Universal Package Manager v3.0" | Get-ScheduledTaskInfo
+# Check scheduled task status
+Get-ScheduledTask -TaskName "Universal Package Manager" | Get-ScheduledTaskInfo
 ```
 
 ## 🔐 Security
@@ -396,8 +406,8 @@ Get-ScheduledTask -TaskName "Universal Package Manager v3.0" | Get-ScheduledTask
 To remove the Universal Package Manager:
 
 ```powershell
-# Remove scheduled task (v3.0)
-Unregister-ScheduledTask -TaskName "Universal Package Manager v3.0" -Confirm:$false
+# Remove scheduled task
+Unregister-ScheduledTask -TaskName "Universal Package Manager" -Confirm:$false
 
 # Remove files (optional)
 Remove-Item -Recurse -Force "C:\ProgramData\UniversalPackageManager"

@@ -1,9 +1,9 @@
 ﻿{
   "_metadata": {
-    "version": "3.0",
+    "version": "3.0.2",
     "schema": "https://github.com/UniversalPackageManager/schema/v3.0",
-    "lastModified": "2025-08-06",
-    "description": "Universal Package Manager v3.0 - PowerShell 7+ Exclusive"
+    "lastModified": "2025-10-13",
+    "description": "Universal Package Manager - PowerShell 7+ Exclusive"
   },
   "Advanced": {
     "logRetentionDays": 30

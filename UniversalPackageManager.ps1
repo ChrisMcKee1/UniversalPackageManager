@@ -3,7 +3,7 @@
 
 <#
 .SYNOPSIS
-    Universal Package Manager v3.0 - Modular PowerShell 7+ Exclusive
+    Universal Package Manager v3.0.2 - Modular PowerShell 7+ Exclusive
 .DESCRIPTION
     Automatically manages and updates packages across multiple package managers
     using a modular architecture with enhanced logging and modern PowerShell features.
@@ -135,7 +135,7 @@ function Initialize-UPM {
         $logDir = Join-Path $script:BaseDir "logs"
         Initialize-UPMLogging -LogDirectory $logDir -LogLevel $effectiveLogLevel -EnableEventLog $config.Logging.enableEventLog -EnableFileLog $config.Logging.enableFileLog -EnableConsoleLogs (-not $Silent)
         
-        Write-UPMLog -Message "Universal Package Manager v3.0 starting" -Level "Info" -Component "MAIN" -Data @{
+        Write-UPMLog -Message "Universal Package Manager v3.0.2 starting" -Level "Info" -Component "MAIN" -Data @{
             "PowerShellVersion" = $PSVersionTable.PSVersion.ToString()
             "Operation" = $Operation
             "DryRun" = $DryRun.IsPresent
@@ -319,7 +319,7 @@ function Invoke-StatusOperation {
         [hashtable]$Config
     )
     
-    Write-UPMLog -Message "Universal Package Manager v3.0 - Status Report" -Level "Info" -Component "STATUS"
+    Write-UPMLog -Message "Universal Package Manager v3.0.2 - Status Report" -Level "Info" -Component "STATUS"
     
     $packageManagers = Get-UPMPackageManagers
     $availableCount = 0
@@ -398,7 +398,7 @@ try {
         }
     }
     
-    Write-UPMLog -Message "Universal Package Manager v3.0 completed successfully" -Level "Success" -Component "MAIN"
+    Write-UPMLog -Message "Universal Package Manager v3.0.2 completed successfully" -Level "Success" -Component "MAIN"
     exit 0
 }
 catch {

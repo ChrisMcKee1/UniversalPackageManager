@@ -17,9 +17,9 @@ $script:Config = $null
 $script:ConfigPath = $null
 $script:DefaultConfig = @{
     "_metadata" = @{
-        "version" = "3.0"
+        "version" = "3.0.2"
         "schema" = "https://github.com/UniversalPackageManager/schema/v3.0"
-        "description" = "Universal Package Manager v3.0 - PowerShell 7+ Exclusive"
+        "description" = "Universal Package Manager - PowerShell 7+ Exclusive"
     }
     "Advanced" = @{
         "logRetentionDays" = 30
@@ -34,7 +34,7 @@ $script:DefaultConfig = @{
         "frequency" = "Daily"
         "updateTime" = "02:00"
         "enabled" = $true
-        "taskName" = "Universal Package Manager v3.0"
+        "taskName" = "Universal Package Manager"
         "runAsSystem" = $true
         "highestPrivileges" = $true
     }

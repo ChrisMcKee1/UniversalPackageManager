@@ -129,7 +129,7 @@ $env:PATH = [Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [En
 Get-Command conda  # Should show C:\ProgramData\Miniconda3\Scripts\conda.exe
 
 # 4. Test in SYSTEM context (scheduled task)
-Start-ScheduledTask -TaskName "Universal Package Manager v3.0"
+Start-ScheduledTask -TaskName "Universal Package Manager"
 Start-Sleep 10
 Get-Content "C:\ProgramData\UniversalPackageManager\logs\UPM-*.log" | Select-Object -Last 30
 ```
