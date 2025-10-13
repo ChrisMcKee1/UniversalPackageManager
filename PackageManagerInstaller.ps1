@@ -799,6 +799,15 @@ function Install-Scoop {
             if ($Force) {
                 Write-InstallerLog "Updating Scoop (force mode)" -Level "Info" -Component "SCOOP"
                 & scoop update scoop
+                
+                # Check exit code to detect errors
+                if ($LASTEXITCODE -ne 0) {
+                    Write-InstallerLog "Scoop update failed with exit code: $LASTEXITCODE" -Level "Error" -Component "SCOOP"
+                    return $false
+                }
+                
+                Write-InstallerLog "Scoop updated successfully" -Level "Success" -Component "SCOOP"
+                return $true
             } else {
                 Write-InstallerLog "Scoop is already installed and functional" -Level "Success" -Component "SCOOP"
                 return $true
@@ -877,10 +886,10 @@ function Install-NodeJS {
         
         Write-InstallerLog "Installing Node.js LTS via winget" -Level "Info" -Component "NODEJS"
         
-        # Try to install via winget first
+        # Try to install via winget first (system-wide for NT AUTHORITY\SYSTEM access)
         $wingetAvailable = Test-PackageManagerInstalled -Name "winget" -Command "winget"
         if ($wingetAvailable.Installed) {
-            & winget install OpenJS.NodeJS --accept-source-agreements --accept-package-agreements --silent
+            & winget install OpenJS.NodeJS --scope machine --accept-source-agreements --accept-package-agreements --silent
         } else {
             # Fallback: provide instructions for manual installation
             Write-InstallerLog "Winget not available - please install Node.js manually from https://nodejs.org/" -Level "Warning" -Component "NODEJS"
@@ -955,10 +964,10 @@ function Install-Python {
         
         Write-InstallerLog "Installing Python via winget" -Level "Info" -Component "PYTHON"
         
-        # Try to install via winget first
+        # Try to install via winget first (system-wide for NT AUTHORITY\SYSTEM access)
         $wingetAvailable = Test-PackageManagerInstalled -Name "winget" -Command "winget"
         if ($wingetAvailable.Installed) {
-            & winget install Python.Python.3.12 --accept-source-agreements --accept-package-agreements --silent
+            & winget install Python.Python.3.12 --scope machine --accept-source-agreements --accept-package-agreements --silent
         } else {
             Write-InstallerLog "Winget not available - please install Python manually from https://python.org/" -Level "Warning" -Component "PYTHON"
             return $false
@@ -1051,10 +1060,11 @@ function Install-Conda {
         } else {
             Write-InstallerLog "Installing Miniconda via winget" -Level "Info" -Component "CONDA"
             
-            # Try to install via winget first
+            # Try to install via winget first (system-wide for NT AUTHORITY\SYSTEM access)
+            # NOTE: Some winget installers may ignore --scope machine
             $wingetAvailable = Test-PackageManagerInstalled -Name "winget" -Command "winget"
             if ($wingetAvailable.Installed) {
-                & winget install Anaconda.Miniconda3 --accept-source-agreements --accept-package-agreements --silent
+                & winget install Anaconda.Miniconda3 --scope machine --accept-source-agreements --accept-package-agreements --silent
             } else {
                 Write-InstallerLog "Winget not available - please install Miniconda manually from https://conda.io/miniconda.html" -Level "Warning" -Component "CONDA"
                 return $false

@@ -21,7 +21,59 @@ function Test-WingetAvailable {
     [CmdletBinding()]
     param()
     
+    # First try standard PATH lookup
     $result = Test-UPMCommand -Command "winget" -Arguments "--version"
+    
+    if (-not $result.Available) {
+        Write-UPMLog -Message "Winget not found in PATH, searching well-known system locations" -Level "Debug" -Component "WINGET"
+        
+        # Search system-wide winget installation paths (for NT AUTHORITY\SYSTEM context)
+        $wingetSearchPaths = @(
+            "$env:ProgramFiles\WindowsApps\Microsoft.DesktopAppInstaller*",
+            "C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller*",
+            "$env:LOCALAPPDATA\Microsoft\WindowsApps",
+            "C:\Windows\System32"
+        )
+        
+        foreach ($searchPath in $wingetSearchPaths) {
+            $expandedPath = [Environment]::ExpandEnvironmentVariables($searchPath)
+            
+            # Handle wildcards
+            if ($expandedPath -like "*`**") {
+                $matchingDirs = Get-ChildItem -Path (Split-Path $expandedPath) -Filter (Split-Path $expandedPath -Leaf) -Directory -ErrorAction SilentlyContinue
+                foreach ($dir in $matchingDirs) {
+                    $wingetExe = Join-Path $dir.FullName "winget.exe"
+                    if (Test-Path $wingetExe -PathType Leaf) {
+                        Write-UPMLog -Message "Found winget at: $wingetExe" -Level "Success" -Component "WINGET"
+                        
+                        # Add to session PATH for this execution
+                        $dirPath = $dir.FullName
+                        if ($env:PATH -notlike "*$dirPath*") {
+                            $env:PATH = "$dirPath;" + $env:PATH
+                        }
+                        
+                        # Re-test with found path
+                        $result = Test-UPMCommand -Command "winget" -Arguments "--version"
+                        break
+                    }
+                }
+            } else {
+                $wingetExe = Join-Path $expandedPath "winget.exe"
+                if (Test-Path $wingetExe -PathType Leaf) {
+                    Write-UPMLog -Message "Found winget at: $wingetExe" -Level "Success" -Component "WINGET"
+                    
+                    if ($env:PATH -notlike "*$expandedPath*") {
+                        $env:PATH = "$expandedPath;" + $env:PATH
+                    }
+                    
+                    $result = Test-UPMCommand -Command "winget" -Arguments "--version"
+                    break
+                }
+            }
+            
+            if ($result.Available) { break }
+        }
+    }
     
     if ($result.Available) {
         Write-UPMLog -Message "Winget is available at: $($result.Path)" -Level "Success" -Component "WINGET"

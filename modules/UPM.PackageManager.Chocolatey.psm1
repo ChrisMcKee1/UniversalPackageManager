@@ -13,6 +13,9 @@
 using module ./UPM.Logging.psm1
 using module ./UPM.ProcessExecution.psm1
 
+# Module-level variable to store the resolved choco path
+$script:ChocoPath = $null
+
 function Test-ChocolateyAvailable {
     <#
     .SYNOPSIS
@@ -21,15 +24,29 @@ function Test-ChocolateyAvailable {
     [CmdletBinding()]
     param()
     
-    $result = Test-UPMCommand -Command "choco" -Arguments "--version"
-    
-    if ($result.Available) {
-        Write-UPMLog -Message "Chocolatey is available at: $($result.Path)" -Level "Success" -Component "CHOCO"
-    } else {
-        Write-UPMLog -Message "Chocolatey is not available: $($result.Error)" -Level "Warning" -Component "CHOCO"
+    try {
+        $result = Test-UPMCommand -Command "choco" -Arguments "--version"
+        
+        if ($result.Available) {
+            $script:ChocoPath = $result.Path
+            Write-UPMLog -Message "Chocolatey is available at: $($result.Path)" -Level "Success" -Component "CHOCO"
+        } else {
+            $script:ChocoPath = $null
+            Write-UPMLog -Message "Chocolatey is not available: $($result.Error)" -Level "Warning" -Component "CHOCO"
+        }
+        
+        return $result
     }
-    
-    return $result
+    catch {
+        $script:ChocoPath = $null
+        Write-UPMLog -Message "Error testing chocolatey availability: $($_.Exception.Message)" -Level "Error" -Component "CHOCO"
+        return @{
+            Available = $false
+            Path = $null
+            Version = $null
+            Error = $_.Exception.Message
+        }
+    }
 }
 
 function Get-ChocolateyPackages {
@@ -138,7 +155,8 @@ function Update-ChocolateyPackages {
             # For dry run, we check what's outdated
             $chocoArgs = "outdated --limit-output"
         } else {
-            $chocoArgs = "upgrade all $Arguments"
+            # Exclude chocolatey itself from upgrades to prevent self-upgrade conflicts
+            $chocoArgs = "upgrade all --except chocolatey $Arguments"
         }
         
         Write-UPMLog -Message "Executing: choco $chocoArgs" -Level "Debug" -Component "CHOCO"

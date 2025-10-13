@@ -12,19 +12,36 @@
 using module ./UPM.Logging.psm1
 using module ./UPM.ProcessExecution.psm1
 
+# Module-level variable to store the resolved npm path
+$script:NpmPath = $null
+
 function Test-NpmAvailable {
     [CmdletBinding()]
     param()
     
-    $result = Test-UPMCommand -Command "npm" -Arguments "--version"
-    
-    if ($result.Available) {
-        Write-UPMLog -Message "NPM is available at: $($result.Path)" -Level "Success" -Component "NPM"
-    } else {
-        Write-UPMLog -Message "NPM is not available: $($result.Error)" -Level "Warning" -Component "NPM"
+    try {
+        $result = Test-UPMCommand -Command "npm" -Arguments "--version"
+        
+        if ($result.Available) {
+            $script:NpmPath = $result.Path
+            Write-UPMLog -Message "NPM is available at: $($result.Path)" -Level "Success" -Component "NPM"
+        } else {
+            $script:NpmPath = $null
+            Write-UPMLog -Message "NPM is not available: $($result.Error)" -Level "Warning" -Component "NPM"
+        }
+        
+        return $result
     }
-    
-    return $result
+    catch {
+        $script:NpmPath = $null
+        Write-UPMLog -Message "Error testing npm availability: $($_.Exception.Message)" -Level "Error" -Component "NPM"
+        return @{
+            Available = $false
+            Path = $null
+            Version = $null
+            Error = $_.Exception.Message
+        }
+    }
 }
 
 function Update-NpmPackages {
@@ -44,13 +61,27 @@ function Update-NpmPackages {
     Write-UPMLog -Message "Starting NPM global $operation" -Level "Debug" -Component "NPM"
     
     try {
+        # Validate npm is available
+        if (-not $script:NpmPath) {
+            $testResult = Test-NpmAvailable
+            if (-not $testResult.Available) {
+                Write-UPMLog -Message "NPM is not available, cannot perform $operation" -Level "Error" -Component "NPM"
+                return @{
+                    Success = $false
+                    Duration = [TimeSpan]::Zero
+                    ExitCode = -1
+                    Error = "NPM not available"
+                }
+            }
+        }
+        
         if ($DryRun) {
             $npmArgs = "outdated -g --depth=0"
         } else {
             $npmArgs = "update -g"
         }
         
-        $result = Invoke-UPMProcess -FilePath "npm" -Arguments $npmArgs -TimeoutSeconds $TimeoutSeconds -Component "NPM" -Description "NPM global $operation"
+        $result = Invoke-UPMProcess -FilePath $script:NpmPath -Arguments $npmArgs -TimeoutSeconds $TimeoutSeconds -Component "NPM" -Description "NPM global $operation"
         
         # For npm outdated, exit code 1 is normal when packages are outdated (not an error)
         $isSuccess = $result.Success -or ($DryRun -and $result.ExitCode -eq 1)

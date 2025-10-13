@@ -180,16 +180,33 @@ function Test-UPMCommand {
     )
     
     try {
-        # First check if command exists, preferring .cmd/.exe over .ps1
-        $commandInfo = Get-Command $Command -ErrorAction SilentlyContinue | Sort-Object { 
-            switch ($_.Source) {
-                {$_ -like "*.exe"} { 0 }
-                {$_ -like "*.cmd"} { 1 }
-                {$_ -like "*.bat"} { 2 }
-                {$_ -like "*.ps1"} { 3 }
-                default { 4 }
+        # Special handling for npm: skip .exe extension (false npm.exe in Python Scripts)
+        if ($Command -eq "npm") {
+            Write-UPMLog -Message "[NPM FIX] Searching for npm.cmd/npm.bat only (skipping .exe)" -Level "Debug" -Component "COMMAND"
+            $preferredExtensions = @(".cmd", ".bat")
+            $commandInfo = $null
+            foreach ($ext in $preferredExtensions) {
+                $lookupName = "npm$ext"
+                Write-UPMLog -Message "[NPM FIX] Trying: $lookupName" -Level "Debug" -Component "COMMAND"
+                $testCmd = Get-Command $lookupName -ErrorAction SilentlyContinue | Select-Object -First 1
+                if ($testCmd) {
+                    Write-UPMLog -Message "[NPM FIX] Found: $($testCmd.Source)" -Level "Debug" -Component "COMMAND"
+                    $commandInfo = $testCmd
+                    break
+                }
             }
-        } | Select-Object -First 1
+        } else {
+            # First check if command exists, preferring .cmd/.exe over .ps1
+            $commandInfo = Get-Command $Command -ErrorAction SilentlyContinue | Sort-Object { 
+                switch ($_.Source) {
+                    {$_ -like "*.exe"} { 0 }
+                    {$_ -like "*.cmd"} { 1 }
+                    {$_ -like "*.bat"} { 2 }
+                    {$_ -like "*.ps1"} { 3 }
+                    default { 4 }
+                }
+            } | Select-Object -First 1
+        }
         
         if (-not $commandInfo) {
             return @{
@@ -201,11 +218,12 @@ function Test-UPMCommand {
         }
         
         # Try to execute and get version
-        Write-UPMLog -Message "Testing command availability: $Command" -Level "Debug" -Component "COMMAND"
+        Write-UPMLog -Message "Testing command availability: $Command at $($commandInfo.Source)" -Level "Debug" -Component "COMMAND"
         
         # Simple execution for command testing (no timeout needed for version checks)
+        # CRITICAL: Use $commandInfo.Source (resolved path) not $Command (name)
         try {
-            $output = & $Command $Arguments.Split(' ') 2>&1
+            $output = & $commandInfo.Source $Arguments.Split(' ') 2>&1
             $success = $LASTEXITCODE -eq 0
             $exitCode = $LASTEXITCODE
         } catch {

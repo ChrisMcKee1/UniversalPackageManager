@@ -12,19 +12,91 @@
 using module ./UPM.Logging.psm1
 using module ./UPM.ProcessExecution.psm1
 
+# Module-level variable to store the resolved pip path
+$script:PipPath = $null
+
 function Test-PipAvailable {
     [CmdletBinding()]
     param()
     
-    $result = Test-UPMCommand -Command "pip" -Arguments "--version"
-    
-    if ($result.Available) {
-        Write-UPMLog -Message "Pip is available at: $($result.Path)" -Level "Success" -Component "PIP"
-    } else {
-        Write-UPMLog -Message "Pip is not available: $($result.Error)" -Level "Warning" -Component "PIP"
+    try {
+        # First try standard PATH lookup
+        $result = Test-UPMCommand -Command "pip" -Arguments "--version"
+        
+        if (-not $result.Available) {
+            Write-UPMLog -Message "Pip not found in PATH, searching well-known Python installation locations" -Level "Debug" -Component "PIP"
+            
+            # Search system-wide Python/pip installation paths (for NT AUTHORITY\SYSTEM context)
+            $pipSearchPaths = @(
+                "$env:ProgramFiles\Python3*\Scripts",
+                "C:\Program Files\Python3*\Scripts",
+                "$env:LOCALAPPDATA\Programs\Python\Python3*\Scripts",
+                "$env:APPDATA\Python\Python3*\Scripts"
+            )
+            
+            foreach ($searchPath in $pipSearchPaths) {
+                $expandedPath = [Environment]::ExpandEnvironmentVariables($searchPath)
+                
+                # Handle wildcards
+                if ($expandedPath -like "*`**") {
+                    $parentPath = Split-Path $expandedPath
+                    $filter = Split-Path $expandedPath -Leaf
+                    $matchingDirs = Get-ChildItem -Path $parentPath -Filter $filter -Directory -ErrorAction SilentlyContinue
+                    
+                    foreach ($dir in $matchingDirs) {
+                        $pipExe = Join-Path $dir.FullName "pip.exe"
+                        if (Test-Path $pipExe -PathType Leaf) {
+                            Write-UPMLog -Message "Found pip at: $pipExe" -Level "Success" -Component "PIP"
+                            
+                            # Add to session PATH
+                            $dirPath = $dir.FullName
+                            if ($env:PATH -notlike "*$dirPath*") {
+                                $env:PATH = "$dirPath;" + $env:PATH
+                            }
+                            
+                            # Re-test
+                            $result = Test-UPMCommand -Command "pip" -Arguments "--version"
+                            break
+                        }
+                    }
+                } else {
+                    $pipExe = Join-Path $expandedPath "pip.exe"
+                    if (Test-Path $pipExe -PathType Leaf) {
+                        Write-UPMLog -Message "Found pip at: $pipExe" -Level "Success" -Component "PIP"
+                        
+                        if ($env:PATH -notlike "*$expandedPath*") {
+                            $env:PATH = "$expandedPath;" + $env:PATH
+                        }
+                        
+                        $result = Test-UPMCommand -Command "pip" -Arguments "--version"
+                        break
+                    }
+                }
+                
+                if ($result.Available) { break }
+            }
+        }
+        
+        if ($result.Available) {
+            $script:PipPath = $result.Path
+            Write-UPMLog -Message "Pip is available at: $($result.Path)" -Level "Success" -Component "PIP"
+        } else {
+            $script:PipPath = $null
+            Write-UPMLog -Message "Pip is not available: $($result.Error)" -Level "Warning" -Component "PIP"
+        }
+        
+        return $result
     }
-    
-    return $result
+    catch {
+        $script:PipPath = $null
+        Write-UPMLog -Message "Error testing pip availability: $($_.Exception.Message)" -Level "Error" -Component "PIP"
+        return @{
+            Available = $false
+            Path = $null
+            Version = $null
+            Error = $_.Exception.Message
+        }
+    }
 }
 
 function Update-PipPackages {
@@ -44,6 +116,20 @@ function Update-PipPackages {
     Write-UPMLog -Message "Starting Pip $operation" -Level "Debug" -Component "PIP"
     
     try {
+        # Validate pip is available
+        if (-not $script:PipPath) {
+            $testResult = Test-PipAvailable
+            if (-not $testResult.Available) {
+                Write-UPMLog -Message "Pip is not available, cannot perform $operation" -Level "Error" -Component "PIP"
+                return @{
+                    Success = $false
+                    Duration = [TimeSpan]::Zero
+                    ExitCode = -1
+                    Error = "Pip not available"
+                }
+            }
+        }
+        
         if ($DryRun) {
             $pipArgs = "list --outdated"
         } else {
@@ -53,7 +139,7 @@ function Update-PipPackages {
             $pipArgs = "list --outdated"
         }
         
-        $result = Invoke-UPMProcess -FilePath "pip" -Arguments $pipArgs -TimeoutSeconds $TimeoutSeconds -Component "PIP" -Description "Pip $operation"
+        $result = Invoke-UPMProcess -FilePath $script:PipPath -Arguments $pipArgs -TimeoutSeconds $TimeoutSeconds -Component "PIP" -Description "Pip $operation"
         
         if ($result.Success) {
             Write-UPMLog -Message "Pip $operation completed successfully" -Level "Success" -Component "PIP"

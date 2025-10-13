@@ -12,54 +12,71 @@
 using module ./UPM.Logging.psm1
 using module ./UPM.ProcessExecution.psm1
 
+# Module-level variable to store the resolved conda path
+$script:CondaPath = $null
+
 function Test-CondaAvailable {
     [CmdletBinding()]
     param()
     
-    # First try standard command lookup
-    $result = Test-UPMCommand -Command "conda" -Arguments "--version"
-    
-    if (-not $result.Available) {
-        Write-UPMLog -Message "Conda not found in PATH, searching common installation locations" -Level "Debug" -Component "CONDA"
+    try {
+        # First try standard command lookup
+        $result = Test-UPMCommand -Command "conda" -Arguments "--version"
         
-        # Search common conda installation paths
-        $condaSearchPaths = @(
-            "$env:USERPROFILE\AppData\Local\miniconda3\Scripts",
-            "$env:LOCALAPPDATA\miniconda3\Scripts",
-            "C:\miniconda3\Scripts",
-            "$env:PROGRAMFILES\Miniconda3\Scripts",
-            "$env:PROGRAMFILES(X86)\Miniconda3\Scripts",
-            "$env:USERPROFILE\Anaconda3\Scripts",
-            "$env:PROGRAMFILES\Anaconda3\Scripts"
-        )
-        
-        foreach ($searchPath in $condaSearchPaths) {
-            $expandedPath = [Environment]::ExpandEnvironmentVariables($searchPath)
-            $condaExe = Join-Path $expandedPath "conda.exe"
+        if (-not $result.Available) {
+            Write-UPMLog -Message "Conda not found in PATH, searching system-wide installation locations" -Level "Debug" -Component "CONDA"
             
-            if (Test-Path $condaExe -PathType Leaf) {
-                Write-UPMLog -Message "Found conda installation at: $condaExe" -Level "Success" -Component "CONDA"
+            # Search system-wide conda installation paths only (for SYSTEM context compatibility)
+            # User-scoped installations are not accessible when running as NT AUTHORITY\SYSTEM
+            $condaSearchPaths = @(
+                "C:\ProgramData\Miniconda3\Scripts",           # System-wide Miniconda (preferred)
+                "C:\ProgramData\Anaconda3\Scripts",            # System-wide Anaconda
+                "$env:PROGRAMFILES\Miniconda3\Scripts",        # Program Files Miniconda
+                "$env:PROGRAMFILES\Anaconda3\Scripts",         # Program Files Anaconda
+                "$env:PROGRAMFILES(X86)\Miniconda3\Scripts",   # 32-bit Program Files
+                "C:\miniconda3\Scripts"                        # Legacy root install
+            )
+            
+            foreach ($searchPath in $condaSearchPaths) {
+                $expandedPath = [Environment]::ExpandEnvironmentVariables($searchPath)
+                $condaExe = Join-Path $expandedPath "conda.exe"
                 
-                # Add to current session PATH
-                if ($env:PATH -notlike "*$expandedPath*") {
-                    $env:PATH = "$expandedPath;" + $env:PATH
-                    Write-UPMLog -Message "Added conda to session PATH: $expandedPath" -Level "Info" -Component "CONDA"
+                if (Test-Path $condaExe -PathType Leaf) {
+                    Write-UPMLog -Message "Found conda installation at: $condaExe" -Level "Success" -Component "CONDA"
+                    
+                    # Add to current session PATH
+                    if ($env:PATH -notlike "*$expandedPath*") {
+                        $env:PATH = "$expandedPath;" + $env:PATH
+                        Write-UPMLog -Message "Added conda to session PATH: $expandedPath" -Level "Info" -Component "CONDA"
+                    }
+                    
+                    # Test again with updated PATH
+                    $result = Test-UPMCommand -Command "conda" -Arguments "--version"
+                    break
                 }
-                
-                # Test again with updated PATH
-                $result = Test-UPMCommand -Command "conda" -Arguments "--version"
-                break
             }
         }
+        
+        if ($result.Available) {
+            $script:CondaPath = $result.Path
+            Write-UPMLog -Message "Conda is available at: $($result.Path)" -Level "Success" -Component "CONDA"
+        } else {
+            $script:CondaPath = $null
+            Write-UPMLog -Message "Conda is not available: $($result.Error)" -Level "Warning" -Component "CONDA"
+        }
+        
+        return $result
     }
-    
-    if ($result.Available) {
-        Write-UPMLog -Message "Conda is available at: $($result.Path)" -Level "Success" -Component "CONDA"
-    } else {
-        Write-UPMLog -Message "Conda is not available: $($result.Error)" -Level "Warning" -Component "CONDA"
+    catch {
+        $script:CondaPath = $null
+        Write-UPMLog -Message "Error testing conda availability: $($_.Exception.Message)" -Level "Error" -Component "CONDA"
+        return @{
+            Available = $false
+            Path = $null
+            Version = $null
+            Error = $_.Exception.Message
+        }
     }
-    
-    return $result
 }
 
 function Update-CondaPackages {
@@ -79,6 +96,20 @@ function Update-CondaPackages {
     Write-UPMLog -Message "Starting Conda $operation" -Level "Debug" -Component "CONDA"
     
     try {
+        # Validate conda is available
+        if (-not $script:CondaPath) {
+            $testResult = Test-CondaAvailable
+            if (-not $testResult.Available) {
+                Write-UPMLog -Message "Conda is not available, cannot perform $operation" -Level "Error" -Component "CONDA"
+                return @{
+                    Success = $false
+                    Duration = [TimeSpan]::Zero
+                    ExitCode = -1
+                    Error = "Conda not available"
+                }
+            }
+        }
+        
         # First, ensure conda is configured for non-interactive use
         Write-UPMLog -Message "Ensuring conda non-interactive configuration" -Level "Debug" -Component "CONDA"
         
@@ -91,7 +122,7 @@ function Update-CondaPackages {
         
         foreach ($channel in $tosChannels) {
             Write-UPMLog -Message "Accepting Terms of Service for: $channel" -Level "Debug" -Component "CONDA"
-            $tosResult = Invoke-UPMProcess -FilePath "conda" -Arguments "tos accept --override-channels --channel $channel" -TimeoutSeconds 60 -Component "CONDA" -Description "Accept conda TOS"
+            $tosResult = Invoke-UPMProcess -FilePath $script:CondaPath -Arguments "tos accept --override-channels --channel $channel" -TimeoutSeconds 60 -Component "CONDA" -Description "Accept conda TOS"
             # Don't fail if TOS acceptance fails (might already be accepted)
             if (-not $tosResult.Success) {
                 Write-UPMLog -Message "TOS acceptance failed for $channel (might already be accepted)" -Level "Debug" -Component "CONDA"
@@ -100,7 +131,7 @@ function Update-CondaPackages {
         
         # Configure conda for non-interactive use
         Write-UPMLog -Message "Configuring conda for non-interactive use" -Level "Debug" -Component "CONDA"
-        $configResult = Invoke-UPMProcess -FilePath "conda" -Arguments "config --set always_yes true" -TimeoutSeconds 60 -Component "CONDA" -Description "Configure conda non-interactive"
+        $configResult = Invoke-UPMProcess -FilePath $script:CondaPath -Arguments "config --set always_yes true" -TimeoutSeconds 60 -Component "CONDA" -Description "Configure conda non-interactive"
         
         if ($DryRun) {
             $condaArgs = "list --name base"
@@ -112,7 +143,7 @@ function Update-CondaPackages {
             }
         }
         
-        $result = Invoke-UPMProcess -FilePath "conda" -Arguments $condaArgs -TimeoutSeconds $TimeoutSeconds -Component "CONDA" -Description "Conda $operation"
+        $result = Invoke-UPMProcess -FilePath $script:CondaPath -Arguments $condaArgs -TimeoutSeconds $TimeoutSeconds -Component "CONDA" -Description "Conda $operation"
         
         if ($result.Success) {
             Write-UPMLog -Message "Conda $operation completed successfully" -Level "Success" -Component "CONDA"

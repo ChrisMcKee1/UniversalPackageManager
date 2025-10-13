@@ -160,16 +160,26 @@ function Initialize-EventLogSource {
     param()
     
     try {
-        # Check if running as administrator (required for event source creation)
+        # First check if the source already exists
+        if ([System.Diagnostics.EventLog]::SourceExists($script:EventSource)) {
+            # Source exists, Event Log is ready to use
+            return
+        }
+        
+        # Source doesn't exist, try to create it (requires Administrator privileges)
         $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
         $isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
         
-        if ($isAdmin -and -not [System.Diagnostics.EventLog]::SourceExists($script:EventSource)) {
+        if ($isAdmin) {
+            # Try to create the source
             [System.Diagnostics.EventLog]::CreateEventSource($script:EventSource, "Application")
+        } else {
+            # Not admin and source doesn't exist - disable Event Log
+            $script:EnableEventLog = $false
         }
     }
     catch {
-        # Silently fail if we can't create the event source
+        # Any error during initialization - silently disable Event Log
         $script:EnableEventLog = $false
     }
 }
@@ -185,7 +195,18 @@ function Write-EventLogEntry {
         [hashtable]$LogEntry
     )
     
+    # Skip if Event Log is disabled or source doesn't exist
+    if (-not $script:EnableEventLog) {
+        return
+    }
+    
     try {
+        # Double-check that the source exists before writing
+        if (-not [System.Diagnostics.EventLog]::SourceExists($script:EventSource)) {
+            # Disable Event Log for this session if source doesn't exist
+            $script:EnableEventLog = $false
+            return
+        }
         $eventType = switch ($LogEntry.Level) {
             "Error"   { "Error" }
             "Warning" { "Warning" }
