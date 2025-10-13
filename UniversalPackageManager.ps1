@@ -262,12 +262,16 @@ function Invoke-UpdateOperation {
         
         $results = @{}
         $successCount = 0
+        $currentIndex = 0
+        $totalCount = $packageManagers.Count
         
         foreach ($pmEntry in $packageManagers.GetEnumerator()) {
+            $currentIndex++
             $pmName = $pmEntry.Key
             $pmConfig = $pmEntry.Value
             
-            Write-UPMLog -Message "Processing package manager: $pmName" -Level "Debug" -Component "MAIN"
+            # Progress indicator
+            Write-UPMLog -Message "[$currentIndex/$totalCount] Processing package manager: $pmName" -Level "Info" -Component "MAIN"
             
             $success = Invoke-PackageManagerUpdate -Name $pmName -Config $pmConfig
             $results[$pmName] = $success
@@ -275,6 +279,9 @@ function Invoke-UpdateOperation {
             if ($success) {
                 $successCount++
             }
+            
+            # Status after each package manager
+            Write-UPMLog -Message "[$currentIndex/$totalCount] Completed: $pmName - $(if ($success) { 'SUCCESS' } else { 'FAILED' })" -Level $(if ($success) { "Success" } else { "Warning" }) -Component "MAIN"
         }
         
         # Summary
@@ -378,6 +385,9 @@ function Invoke-ConfigureOperation {
 
 # Main execution
 try {
+    # Start overall script timer
+    $script:ScriptStartTime = Get-Date
+    
     # Initialize system
     $config = Initialize-UPM
     
@@ -397,6 +407,22 @@ try {
             exit 1
         }
     }
+    
+    # Prominent completion banner
+    $elapsedTime = (Get-Date) - $script:ScriptStartTime
+    $elapsedFormatted = "{0:mm}m {0:ss}s" -f $elapsedTime
+    $separator = "=" * 70
+    
+    Write-Host ""
+    Write-Host $separator -ForegroundColor Green
+    Write-Host "  UNIVERSAL PACKAGE MANAGER v3.0.2 - COMPLETED SUCCESSFULLY" -ForegroundColor Green
+    Write-Host $separator -ForegroundColor Green
+    Write-Host "  Operation: $Operation" -ForegroundColor Cyan
+    Write-Host "  Status:    SUCCESS" -ForegroundColor Green
+    Write-Host "  Duration:  $elapsedFormatted" -ForegroundColor Cyan
+    Write-Host "  Time:      $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Cyan
+    Write-Host $separator -ForegroundColor Green
+    Write-Host ""
     
     Write-UPMLog -Message "Universal Package Manager v3.0.2 completed successfully" -Level "Success" -Component "MAIN"
     exit 0
