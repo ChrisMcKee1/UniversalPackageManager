@@ -20,8 +20,6 @@ If you have 50+ installed programs (typical developer/power user), you save **2-
 
 ### [⬇️ Download the Latest Release](https://github.com/ChrisMcKee1/UniversalPackageManager/releases/latest)
 
-**Direct Download**: https://github.com/ChrisMcKee1/UniversalPackageManager/releases/latest
-
 ## 🚀 Overview
 
 The Universal Package Manager (UPM) v3.0.2 consolidates package management across all major Windows package managers into a single, automated system powered exclusively by PowerShell 7+. It features a **modular architecture** with focused, maintainable components, runs as a scheduled task with full SYSTEM privileges, and includes structured logging with comprehensive error handling.
