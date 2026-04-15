@@ -1,256 +1,189 @@
-﻿# Universal Package Manager v3.0.2 🚀
+# Universal Package Manager v3.0.2
 
-## ⚡ Why Should I Care?
+Universal Package Manager (UPM) is a PowerShell 7+ automation system for keeping Windows software updated across multiple package managers from one scheduled task.
 
-**Stop manually updating software forever.** UPM v3.0.2 automatically keeps ALL your Windows software up-to-date across **6 different package managers** - set it up once, forget about it forever.
+## What it does
 
-### 🎯 What This Does For You:
-- **⏰ Saves Hours**: No more manual software updates - runs automatically daily at 2 AM
-- **🔐 Maximum Security**: Always have the latest security patches across ALL your software
-- **🚀 Zero Maintenance**: Works with winget, Chocolatey, Scoop, NPM, pip, and Conda simultaneously  
-- **💼 Enterprise-Ready**: Runs with SYSTEM privileges, comprehensive logging, handles corporate environments
-- **🛡️ Risk-Free**: Dry-run mode lets you see what would update before making changes
+- Updates packages across winget, Chocolatey, Scoop, npm, pip, and Conda
+- Runs as a scheduled task under `NT AUTHORITY\SYSTEM`
+- Uses a modular PowerShell architecture with focused package manager modules
+- Supports dry runs, status checks, structured logging, and configurable timeouts
+- Includes an installer for missing package managers
 
-### 📊 Real Impact:
-If you have 50+ installed programs (typical developer/power user), you save **2-3 hours per week** of manual updates while ensuring you never miss critical security patches.
+## Current platform status
 
-> **⚠️ Breaking Change**: Version 3.0 requires PowerShell 7.0+ and uses a completely new modular architecture for better maintainability.
+UPM is designed for system-wide automation. In the current v3.0.2 implementation, 5 of the 6 supported package managers work in SYSTEM context.
 
-## 📥 Download
+| Package manager | Status in SYSTEM context | Notes |
+| --- | --- | --- |
+| winget | Working | Searches well-known WindowsApps locations when not in PATH |
+| Chocolatey | Working | System-wide by design |
+| npm | Working | Uses `npm.cmd` detection to avoid PowerShell script resolution issues |
+| pip | Working | Searches system-wide Python installation paths |
+| Conda | Working | Uses system-wide install paths and avoids the `/AddToPath=1` CVE-2022-26526 issue |
+| Scoop | User-only | Scoop remains user-scoped by design |
 
-### [⬇️ Download Latest Release (v3.0.2)](https://github.com/ChrisMcKee1/UniversalPackageManager/archive/refs/tags/v3.0.2.zip)
+## Requirements
 
-**Direct Download**: https://github.com/ChrisMcKee1/UniversalPackageManager/releases/latest
+- Windows 10/11 or Windows Server 2019+
+- PowerShell 7.0+
+- Administrator privileges for installation and scheduled-task setup
 
-## 🚀 Overview
+## Repository layout
 
-The Universal Package Manager (UPM) v3.0.2 consolidates package management across all major Windows package managers into a single, automated system powered exclusively by PowerShell 7+. It features a **modular architecture** with focused, maintainable components, runs as a scheduled task with full SYSTEM privileges, and includes structured logging with comprehensive error handling.
+```text
+UniversalPackageManager/
+├── UniversalPackageManager.ps1      # Main orchestrator
+├── Install-UPM.ps1                  # Scheduled-task installer
+├── PackageManagerInstaller.ps1      # Installs or upgrades supported package managers
+├── Migrate-TaskName.ps1             # Renames old v3.0.x scheduled task names
+├── README.md
+├── USAGE.md
+├── MODULES.md
+├── CONDA-RESEARCH-FINDINGS.md
+├── config/
+│   └── settings.json
+├── modules/
+│   ├── UPM.Logging.psm1
+│   ├── UPM.Configuration.psm1
+│   ├── UPM.ProcessExecution.psm1
+│   ├── UPM.PackageManager.Winget.psm1
+│   ├── UPM.PackageManager.Chocolatey.psm1
+│   ├── UPM.PackageManager.Scoop.psm1
+│   ├── UPM.PackageManager.Npm.psm1
+│   ├── UPM.PackageManager.Pip.psm1
+│   └── UPM.PackageManager.Conda.psm1
+└── scripts/
+    └── Restore-PathBackup.ps1
+```
 
-## 🆕 What's New in v3.0
+## Quick start
 
-### 🔥 Breaking Changes
-- **PowerShell 7.0+ Required**: No longer compatible with Windows PowerShell 5.1
-- **Scheduled Task Name**: Now "Universal Package Manager" (version-agnostic, use Migrate-TaskName.ps1 to upgrade from v3.0.x)
+1. Extract the repository contents to `C:\ProgramData\UniversalPackageManager`
+2. Open PowerShell 7 as Administrator
+3. Optionally install package managers:
 
-### ✨ New Features
-- **🏗️ Modular Architecture**: Organized into focused modules (~50-80 lines each) for better maintainability
-- **📊 Structured Logging**: JSON output with performance metrics and telemetry
-- **🌈 ANSI Colors**: Beautiful console output using PowerShell 7+ $PSStyle
-- **⚡ Enhanced Performance**: Native PowerShell 7+ timeout support and better process handling
-- **🔍 Rich Diagnostics**: Detailed error tracking with context and timing information
-- **🛠️ Package Manager Installer**: Dedicated script to install/upgrade missing package managers
-- **🔄 Clean Reinstall**: Installation script always performs clean reinstalls for reliability
-- **✅ Emoji-Free**: Resolved all Unicode compatibility issues for better reliability
+```powershell
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\PackageManagerInstaller.ps1"
+```
 
-## 🆕 What's New in v3.0.2
+4. Install the scheduled task:
 
-### � System-Wide Package Manager Support (5/6 Working!)
-- **✅ System-wide installations**: All package managers now installed with `--scope machine` for SYSTEM account access
-- **✅ Fixed npm detection**: Special `.cmd` file handling prevents "not a valid Win32 application" error
-- **✅ Fixed Conda CVE-2022-26526**: Proper security-compliant installation without `/AddToPath=1` parameter
-- **✅ Well-known path fallbacks**: Winget, Pip, and Conda modules search system-wide locations when not in PATH
-- **✅ Version-agnostic task name**: Scheduled task now named "Universal Package Manager" (no version number)
-- **✅ Event Log initialization fix**: Checks if source exists before writing to prevent errors
-- **⚠️ Scoop user-only**: Scoop remains user-scoped by design (can't work in SYSTEM context)
+```powershell
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\Install-UPM.ps1"
+```
 
-**Status**: 5 of 6 package managers fully working in SYSTEM context (83% coverage)
+By default, the installer creates a scheduled task named `Universal Package Manager` that runs daily at `02:00` with highest privileges as `SYSTEM`.
 
-### 📋 Upgrading from v3.0.x
-If upgrading from v3.0.0 or v3.0.1, run this **once** to rename your scheduled task:
+## Common commands
+
+### Run updates immediately
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1"
+```
+
+### Preview updates without changing anything
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -DryRun
+```
+
+### Update only selected package managers
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -SelectedPackageManagers @("winget", "choco")
+```
+
+### Show package manager status
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -Operation Status
+```
+
+### Open the configuration file
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -Operation Configure
+```
+
+### Run with debug logging
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -LogLevel Debug
+```
+
+## Installation and scheduling
+
+`Install-UPM.ps1` always performs a clean reinstall of the scheduled task before creating a new one.
+
+### Change the schedule
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\Install-UPM.ps1" -Frequency Weekly -UpdateTime "03:30"
+```
+
+Supported values:
+
+- `-Frequency Daily`
+- `-Frequency Weekly` (runs on Sunday)
+- `-UpdateTime "HH:MM"`
+
+### Upgrade from older v3.0.x task names
+
+If you still have the older task named `Universal Package Manager v3.0`, run:
+
 ```powershell
 pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\Migrate-TaskName.ps1"
 ```
 
-## 📦 Supported Package Managers
+## Package manager installer
 
-- **Windows Package Manager (winget)** - Microsoft's official package manager
-- **Chocolatey** - Popular Windows package manager  
-- **Scoop** - Command-line installer for Windows
-- **NPM** - Node.js package manager (global packages)
-- **pip** - Python package installer
-- **Conda** - Python/R data science package manager
+`PackageManagerInstaller.ps1` can install or upgrade these targets:
 
-## 🎯 Key Features (v3.0)
+- `winget`
+- `choco`
+- `scoop`
+- `nodejs`
+- `python`
+- `conda`
+- `all`
 
-- **🤖 Fully Automated**: Runs daily at 2:00 AM by default with PowerShell 7+
-- **🔐 Administrative Privileges**: Executes with SYSTEM account and highest privileges
-- **🎨 Modern UI**: Beautiful progress bars with emoji indicators and real-time estimates
-- **📊 Enhanced Logging**: Structured JSON logging with performance metrics and telemetry
-- **🛡️ Robust Error Handling**: Advanced timeout protection, retry logic, and comprehensive error tracking
-- **⚙️ Highly Configurable**: Enhanced JSON configuration with v3.0 features
-- **🔄 Dry Run Support**: Test operations without making changes
-- **⚡ Performance Optimized**: PowerShell 7+ exclusive for maximum speed and reliability
-- **🌈 ANSI Colors**: Modern console output with $PSStyle support
-
-## 📁 File Structure
-
-```
-C:\ProgramData\UniversalPackageManager\
-├── UniversalPackageManager.ps1     # Main orchestrator script (modular)
-├── Install-UPM.ps1                 # Installation and setup script
-├── PackageManagerInstaller.ps1     # Package manager installer script
-├── README.md                        # This documentation
-├── MODULES.md                       # Modular architecture documentation
-├── modules\                         # Module directory
-│   ├── UPM.Logging.psm1            # Core logging functionality
-│   ├── UPM.Configuration.psm1      # Configuration management
-│   ├── UPM.ProcessExecution.psm1   # Process execution with timeouts
-│   ├── UPM.PackageManager.Winget.psm1      # Windows Package Manager
-│   ├── UPM.PackageManager.Chocolatey.psm1  # Chocolatey package manager
-│   ├── UPM.PackageManager.Scoop.psm1       # Scoop package manager
-│   ├── UPM.PackageManager.Npm.psm1         # NPM global packages
-│   ├── UPM.PackageManager.Pip.psm1         # Python pip packages
-│   └── UPM.PackageManager.Conda.psm1       # Conda package manager
-├── config\
-│   └── settings.json               # Configuration file
-└── logs\                           # Log files (auto-rotated)
-    ├── UPM-YYYYMMDD-HHMMSS.log    # Human-readable logs
-    └── UPM-YYYYMMDD-HHMMSS.json.log  # Structured JSON logs
-```
-
-## 🚀 Quick Start (5 Minutes to Never Update Software Manually Again)
-
-### Prerequisites
-- Windows 10/11 or Windows Server 2019+
-- **PowerShell 7.0+ (REQUIRED)** - Must be installed before UPM v3.0
-- Administrator privileges for installation
-
-> **Important**: UPM v3.0 will NOT work with Windows PowerShell 5.1. Install PowerShell 7+ first:
-> - **Microsoft Store**: Search "PowerShell"  
-> - **Winget**: `winget install Microsoft.PowerShell`
-> - **Direct**: https://github.com/PowerShell/PowerShell/releases
-
-### 🎯 Recommended Path (Works with Existing Software)
-
-**Step 1: Download and Extract**
-- Download: [UniversalPackageManager_v3.0.1.zip](https://github.com/ChrisMcKee1/UniversalPackageManager/archive/refs/tags/v3.0.1.zip)
-- Extract to: `C:\ProgramData\UniversalPackageManager\`
-
-**Step 2: Setup Automatic Updates** (Right-click → "Run as Administrator")
-```powershell
-pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\Install-UPM.ps1"
-```
-
-**Done!** 🎉 Your software will now update automatically every day at 2:00 AM. UPM works with whatever package managers you already have installed.
-
-### ⚡ Power User Path (Get All Package Managers)
-
-If you want to maximize your software management capabilities:
-
-**Step 1: Download and Extract** (same as above)
-
-**Step 2: Install All Package Managers** (Optional but recommended)
-```powershell
-# Installs winget, Chocolatey, Scoop, Node.js, Python, and Miniconda automatically
-pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\PackageManagerInstaller.ps1"
-```
-
-**Step 3: Setup Automatic Updates**
-```powershell
-pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\Install-UPM.ps1"
-```
-
-**Result**: You now have access to 50,000+ packages across 6 package managers, all updating automatically!
-
-## 🎮 Usage Scenarios
-
-### 🔧 Common Operations
+Examples:
 
 ```powershell
-# 🚀 Run immediate update of all packages (great for testing)
-pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1"
+# Install everything using configuration defaults
+pwsh -ExecutionPolicy Bypass -File ".\PackageManagerInstaller.ps1"
 
-# 🔍 See what would be updated without making changes (safe to run anytime)  
-pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -DryRun
-
-# 🎯 Update only specific package managers (when you have issues with one)
-pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -SelectedPackageManagers @("winget", "choco")
-
-# ⚙️ Open configuration editor (customize settings)
-pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -Operation Configure
-
-# 🔍 Check system status (see what's installed and working)
-pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -Operation Status
-
-# 🐛 Troubleshoot issues with detailed logging
-pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -LogLevel Debug
+# Reinstall only Conda without prompts
+pwsh -ExecutionPolicy Bypass -File ".\PackageManagerInstaller.ps1" -PackageManagers @("conda") -Force -SkipConfirmation
 ```
 
-### 💡 Real-World Scenarios
+## Configuration
 
-**Scenario 1: New Developer Machine Setup**
-```powershell
-# Install all development tools and package managers
-pwsh -ExecutionPolicy Bypass -File ".\PackageManagerInstaller.ps1" -Force
+The default configuration file is `config\settings.json`.
 
-# Set up automated updates
-pwsh -ExecutionPolicy Bypass -File ".\Install-UPM.ps1"
+### Important behavior
 
-# Result: Full development environment with automatic maintenance
-```
+- Package-manager settings belong in `PackageManagers`
+- Installer defaults belong in `PackageManagerInstaller`
+- File/Event Log settings belong in `Logging`
+- Log retention belongs in `Advanced.logRetentionDays`
+- Scheduling is configured through `Install-UPM.ps1`, not by editing `settings.json`
 
-**Scenario 2: Maintenance Window Testing**  
-```powershell
-# See what updates are available before maintenance window
-pwsh -ExecutionPolicy Bypass -File ".\UniversalPackageManager.ps1" -DryRun
+### Example
 
-# During maintenance window, update everything
-pwsh -ExecutionPolicy Bypass -File ".\UniversalPackageManager.ps1"
-
-# Check for any failures
-pwsh -ExecutionPolicy Bypass -File ".\UniversalPackageManager.ps1" -Operation Status
-```
-
-**Scenario 3: Troubleshooting Package Manager Issues**
-```powershell
-# Test specific package manager that's having problems
-pwsh -ExecutionPolicy Bypass -File ".\UniversalPackageManager.ps1" -SelectedPackageManagers @("conda") -DryRun -LogLevel Debug
-
-# View recent logs
-Get-Content .\logs\UPM-*.log | Select-Object -Last 50
-```
-
-### 🎛️ Advanced Configuration Options
-
-**Custom Update Schedule**
-```powershell
-# Run updates weekly on Sunday at 3:30 AM instead of daily
-pwsh -ExecutionPolicy Bypass -File ".\Install-UPM.ps1" -Frequency Weekly -UpdateTime "03:30"
-
-# Run updates daily at 6:00 PM (good for always-on workstations)  
-pwsh -ExecutionPolicy Bypass -File ".\Install-UPM.ps1" -Frequency Daily -UpdateTime "18:00"
-```
-
-**Package Manager Installation Flexibility**
-```powershell
-# Install everything automatically (recommended for new machines)
-pwsh -ExecutionPolicy Bypass -File ".\PackageManagerInstaller.ps1"                                    
-
-# Install only specific package managers with confirmation prompts
-pwsh -ExecutionPolicy Bypass -File ".\PackageManagerInstaller.ps1" -PackageManagers @("choco", "scoop")  
-
-# Force clean reinstall of everything (good for fixing corrupted installations)
-pwsh -ExecutionPolicy Bypass -File ".\PackageManagerInstaller.ps1" -Force -SkipConfirmation          
-
-# Fix specific package manager installation
-pwsh -ExecutionPolicy Bypass -File ".\PackageManagerInstaller.ps1" -PackageManagers @("conda") -Force   
-```
-
-**What Each Package Manager Gives You:**
-- **winget**: Windows Store apps, Microsoft tools, development software  
-- **Chocolatey**: Largest Windows package repository (8,000+ packages)
-- **Scoop**: Developer tools, portable apps, command-line utilities
-- **npm**: JavaScript/Node.js packages and development tools
-- **pip**: Python packages and data science tools  
-- **conda**: Scientific computing, data science, AI/ML packages
-
-## ⚙️ Configuration
-
-Edit `config\settings.json` to customize behavior:
-
-### Package Manager Settings
 ```json
 {
+  "Advanced": {
+    "logRetentionDays": 30
+  },
+  "Logging": {
+    "enableEventLog": true,
+    "enableFileLog": true,
+    "defaultLogLevel": "Info",
+    "logRotation": "daily"
+  },
   "PackageManagers": {
     "winget": {
       "enabled": true,
@@ -266,180 +199,62 @@ Edit `config\settings.json` to customize behavior:
 }
 ```
 
-### Service Settings
-```json
-{
-  "Service": {
-    "enabled": true,
-    "taskName": "Universal Package Manager",
-    "runAsSystem": true,
-    "highestPrivileges": true
-  }
-}
-```
+## Logging
 
-> **Note**: Scheduling settings (`updateTime`, `frequency`) must be configured during installation using Install-UPM.ps1 parameters, not through settings.json.
+UPM supports file logging and Windows Event Log output.
 
-### Advanced Settings (v3.0)
-```json
-{
-  "Advanced": {
-    "logRetentionDays": 30
-  }
-}
-```
+- Log directory: `logs\`
+- Daily log file: `UPM-YYYYMMDD.log`
+- Event Log source: `UniversalPackageManager`
+- Log levels: `Debug`, `Info`, `Warning`, `Error`, `Success`
 
-### PackageManagerInstaller Settings
-```json
-{
-  "PackageManagerInstaller": {
-    "defaultPackageManagers": ["all"],
-    "autoAccept": true,
-    "forceReinstall": false,
-    "preferredInstallMethods": {
-      "winget": "store",
-      "nodejs": "winget",
-      "python": "winget",
-      "conda": "winget"
-    }
-  }
-}
-```
-
-## 📊 Configuration Options
-
-| Setting | Description | Default | Options |
-|---------|-------------|---------|---------|
-| `enabled` | Enable/disable package manager | `true` | `true`, `false` |
-| `args` | Additional command line arguments | varies | Any valid arguments |
-| `timeout` | Timeout in seconds | varies | Any positive integer |
-| `logRetentionDays` | Number of days to keep log files | `30` | Any positive integer |
-| `defaultPackageManagers` | Package managers to install by default | `["all"]` | Array of package manager names |
-| `autoAccept` | Automatically accept installation prompts | `true` | `true`, `false` |
-| `forceReinstall` | Force reinstall of package managers | `false` | `true`, `false` |
-
-## 📝 Enhanced Logging (v3.0)
-
-### Log Files
-- **Location**: `C:\ProgramData\UniversalPackageManager\logs\`
-- **Human-readable Format**: `UPM-YYYYMMDD-HHMMSS.log`
-- **Structured JSON Format**: `UPM-YYYYMMDD-HHMMSS.json.log` (new in v3.0)
-- **Retention**: Configurable (default 30 log files)
-- **Levels**: Debug, Info, Warning, Error, Success
-
-### New v3.0 Logging Features
-- **🏗️ Structured Data**: All log entries include metadata, timing, and context
-- **📊 Performance Metrics**: Execution times, package counts, success rates
-- **🔍 Rich Context**: Process IDs, thread IDs, component tracking
-- **🎨 ANSI Colors**: Beautiful console output using PowerShell 7+ $PSStyle
-- **📈 Telemetry**: Detailed diagnostics for troubleshooting
-- **📁 Dual Format**: Human-readable and JSON logs for different use cases
-
-### Log Level Hierarchy
-- **Debug**: Everything including structured data (most verbose)
-- **Info**: Normal operations, warnings, errors, successes with context
-- **Warning**: Warnings, errors, successes with performance data
-- **Error**: Errors and successes with full diagnostic information
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-**Q: Some package managers aren't being updated**  
-A: Use the PackageManagerInstaller.ps1 script to install missing package managers, or check if they're properly installed and accessible.
-
-**Q: Updates are failing with permission errors**  
-A: The installer always performs a clean reinstall. Run Install-UPM.ps1 again to ensure proper configuration.
-
-**Q: Want to change the update schedule**  
-A: Rerun the Install-UPM.ps1 script with new `-UpdateTime` and `-Frequency` parameters, or use the Task Scheduler (`taskschd.msc`) to modify the "Universal Package Manager" task directly.
-
-**Q: Need to see what's happening during updates**  
-A: Check both the human-readable (.log) and JSON (.json.log) files in the `logs\` folder, or run manually with `-LogLevel Debug`.
-
-**Q: Missing package managers**  
-A: Run the PackageManagerInstaller.ps1 script to automatically install winget, Chocolatey, Scoop, Node.js, Python, and Miniconda.
-
-### Manual Troubleshooting
-
-#### Open Task Scheduler
-
-1. Press the `Windows + R` or open `Run`
-2. Paste
-    ```text
-    taskschd.msc
-    ```
-3. Press Ok then find your task named `Universal Package Manager`
-
-#### Use Powershell
+Useful commands:
 
 ```powershell
-# Test individual package managers
-pwsh -ExecutionPolicy Bypass -File ".\UniversalPackageManager.ps1" -SelectedPackageManagers @("winget") -DryRun -LogLevel Debug
+# Tail the newest text log
+Get-Content (Get-ChildItem ".\logs\UPM-*.log" | Sort-Object CreationTime | Select-Object -Last 1).FullName -Tail 50
 
-# Check system status
-pwsh -ExecutionPolicy Bypass -File ".\UniversalPackageManager.ps1" -Operation Status
-
-# Install missing package managers
-pwsh -ExecutionPolicy Bypass -File ".\PackageManagerInstaller.ps1" -PackageManagers @("choco", "scoop")
-
-# View recent log entries (human-readable)
-Get-Content (Get-ChildItem .\logs\UPM-*.log | Sort-Object CreationTime | Select-Object -Last 1).FullName -Tail 50
-
-# View structured JSON logs
-Get-Content (Get-ChildItem .\logs\UPM-*.json.log | Sort-Object CreationTime | Select-Object -Last 1).FullName -Tail 10 | ConvertFrom-Json
+# View recent Application log entries
+Get-WinEvent -LogName Application -Source "UniversalPackageManager" -MaxEvents 20
 
 # Check scheduled task status
 Get-ScheduledTask -TaskName "Universal Package Manager" | Get-ScheduledTaskInfo
 ```
 
-## 🔐 Security
+## Troubleshooting
 
-- Runs with **SYSTEM** account privileges for maximum compatibility
-- Uses **Highest** execution level for administrative operations
-- All operations are logged for audit trail
-- Configuration files use standard Windows ACLs
-- No network communication except through package managers
+### A package manager is not being updated
 
-## 🔄 Uninstalling
+- Run `-Operation Status`
+- Use `-DryRun -LogLevel Debug`
+- Install or repair the package manager with `PackageManagerInstaller.ps1`
 
-To remove the Universal Package Manager:
+### Scheduled updates need a new time
 
-```powershell
-# Remove scheduled task
-Unregister-ScheduledTask -TaskName "Universal Package Manager" -Confirm:$false
+Re-run `Install-UPM.ps1` with a new `-Frequency` or `-UpdateTime`.
 
-# Remove files (optional)
-Remove-Item -Recurse -Force "C:\ProgramData\UniversalPackageManager"
-```
+### Scoop does not update from the scheduled task
 
-> **Note**: The v3.0 installer automatically handles cleanup of old tasks during installation.
+That is expected. Scoop is user-scoped and is not available to the SYSTEM account by design.
 
-## 📞 Support
+### Conda or pip is not found in PATH
 
-For issues or questions:
-1. Check both human-readable (.log) and JSON (.json.log) files in the `logs\` folder
-2. Run with `-LogLevel Debug` for detailed output
-3. Test with `-DryRun` to see what would happen
-4. Use `-Operation Status` to check system status
-5. Run `PackageManagerInstaller.ps1` to install missing package managers
-6. Verify your configuration in `config\settings.json`
-7. Review the modular architecture documentation in `MODULES.md`
+UPM already checks well-known system-wide install locations. If detection still fails, verify that the tool was installed system-wide.
 
-## 📄 License
+## Architecture
 
-This software is provided as-is for educational and operational purposes.
+UPM v3.0.2 is organized into:
 
-## 🏗️ Architecture
+- one orchestrator script
+- three core modules for logging, configuration, and process execution
+- one module per package manager
 
-UPM v3.0 features a completely new **modular architecture** that breaks the previous monolithic script (~2000+ lines) into focused, maintainable modules (~50-80 lines each). See `MODULES.md` for detailed architecture documentation.
+See:
 
-### Key Benefits:
-- **Maintainability**: Each module has a single responsibility
-- **Reliability**: Issues in one package manager don't affect others
-- **Extensibility**: Easy to add new package managers
-- **Testing**: Individual modules can be tested independently
+- `USAGE.md` for operator-focused examples
+- `MODULES.md` for module responsibilities and extension guidance
+- `CONDA-RESEARCH-FINDINGS.md` for the Conda installation constraints and security background
 
----
+## License
 
-**🎉 Enjoy automated package management with modern, maintainable architecture!**
+This project is provided as-is for educational and operational purposes.

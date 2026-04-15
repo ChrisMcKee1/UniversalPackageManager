@@ -1,214 +1,153 @@
-# Universal Package Manager v3.0 - Modular Architecture
+# Universal Package Manager module guide
 
-This document describes the modular architecture introduced in Universal Package Manager v3.0.
+UPM v3.0.2 uses a modular PowerShell 7+ architecture. The main script coordinates execution, while each module owns one area of behavior.
 
-## Architecture Overview
+## High-level structure
 
-UPM v3.0 has been completely refactored from a single monolithic script (~2000+ lines) into a modular architecture with focused, maintainable components (~50-80 lines each).
-
-## Module Structure
-
-```
-C:\ProgramData\UniversalPackageManager\
-├── UniversalPackageManager.ps1          # Main orchestrator (318 lines)
-├── UniversalPackageManager-old.ps1      # Backup of original monolithic script
-├── modules\                              # Module directory
-│   ├── UPM.Logging.psm1                 # Core logging functionality
-│   ├── UPM.Configuration.psm1           # Configuration management
-│   ├── UPM.ProcessExecution.psm1        # Process execution with timeouts
-│   ├── UPM.PackageManager.Winget.psm1   # Windows Package Manager
-│   ├── UPM.PackageManager.Chocolatey.psm1 # Chocolatey package manager
-│   ├── UPM.PackageManager.Scoop.psm1    # Scoop package manager
-│   ├── UPM.PackageManager.Npm.psm1      # NPM global packages
-│   ├── UPM.PackageManager.Pip.psm1      # Python pip packages
-│   └── UPM.PackageManager.Conda.psm1    # Conda package manager
-├── config\
-│   └── settings.json                     # Configuration file
-└── logs\                                 # Log directory
-    ├── UPM-YYYYMMDD-HHMMSS.log         # Human-readable logs
-    └── UPM-YYYYMMDD-HHMMSS.json.log    # Structured JSON logs
+```text
+UniversalPackageManager.ps1
+├── UPM.Logging.psm1
+├── UPM.Configuration.psm1
+├── UPM.ProcessExecution.psm1
+├── UPM.PackageManager.Winget.psm1
+├── UPM.PackageManager.Chocolatey.psm1
+├── UPM.PackageManager.Scoop.psm1
+├── UPM.PackageManager.Npm.psm1
+├── UPM.PackageManager.Pip.psm1
+└── UPM.PackageManager.Conda.psm1
 ```
 
-## Core Modules
+## Orchestrator
 
-### UPM.Logging.psm1
-**Purpose**: Centralized logging with structured data and performance metrics
+### `UniversalPackageManager.ps1`
 
-**Key Functions**:
-- `Initialize-UPMLogging` - Setup logging system
-- `Write-UPMLog` - Write structured log entries
-- `Start-UPMTimer` / `Stop-UPMTimer` - Performance timing
-- `Remove-OldLogFiles` - Log cleanup
+Responsibilities:
 
-**Features**:
-- JSON structured logging
-- ANSI color console output
-- Performance metrics and timing
-- Automatic log rotation
-- PowerShell 7+ $PSStyle support
-- No emoji/Unicode characters for Windows PowerShell 5.1 compatibility
+- imports all core and package manager modules
+- maps each package manager name to its `Test`, `Update`, and `Info` functions
+- initializes logging and configuration
+- runs one of three operations: `Update`, `Status`, or `Configure`
 
-### UPM.Configuration.psm1
-**Purpose**: Configuration file management and validation
+Supported package manager keys:
 
-**Key Functions**:
-- `Initialize-UPMConfiguration` - Load and validate config
-- `Get-UPMConfiguration` - Get current configuration
-- `Get-UPMPackageManagers` - Get enabled package managers
-- `Update-UPMConfiguration` - Update configuration values
+- `winget`
+- `choco`
+- `scoop`
+- `npm`
+- `pip`
+- `conda`
 
-**Features**:
-- JSON configuration with schema validation
-- Default configuration merging
-- Configuration validation with warnings
-- Automatic configuration file creation
+## Core modules
 
-### UPM.ProcessExecution.psm1
-**Purpose**: Safe process execution with PowerShell 7+ features
+### `UPM.Logging.psm1`
 
-**Key Functions**:
-- `Invoke-UPMProcess` - Execute process with timeout
-- `Test-UPMCommand` - Test command availability
-- `Invoke-UPMProcessWithRetry` - Process execution with retry logic
+Handles:
 
-**Features**:
-- PowerShell 7+ TimeoutSec parameter
-- Comprehensive error handling
-- Process monitoring and control
-- Retry logic with configurable delays
+- console logging
+- Windows Event Log initialization
+- daily file log creation (`UPM-YYYYMMDD.log`)
+- retention cleanup through `Remove-OldLogFiles`
+- operation timing helpers
 
-## Package Manager Modules
+Key exported functions:
 
-Each package manager has its own dedicated module following a consistent interface:
+- `Initialize-UPMLogging`
+- `Write-UPMLog`
+- `Start-UPMTimer`
+- `Stop-UPMTimer`
+- `Remove-OldLogFiles`
 
-### Standard Interface
-All package manager modules implement these functions:
-- `Test-[PackageManager]Available` - Check if package manager is installed
-- `Update-[PackageManager]Packages` - Update all packages
-- `Get-[PackageManager]Info` - Get package manager information
+### `UPM.Configuration.psm1`
 
-### UPM.PackageManager.Winget.psm1
-**Package Manager**: Windows Package Manager (winget)
-**Additional Functions**:
-- `Get-WingetPackages` - List installed packages
-- `Get-WingetUpgradablePackages` - List upgradeable packages
-- `Install-WingetPackage` - Install specific package
-- `Uninstall-WingetPackage` - Uninstall specific package
+Handles:
 
-### UPM.PackageManager.Chocolatey.psm1
-**Package Manager**: Chocolatey
-**Additional Functions**:
-- `Get-ChocolateyPackages` - List installed packages
-- `Get-ChocolateyUpgradablePackages` - List upgradeable packages
-- `Install-ChocolateyPackage` - Install specific package
-- `Uninstall-ChocolateyPackage` - Uninstall specific package
-- `Update-ChocolateyItself` - Update Chocolatey itself
+- loading `settings.json`
+- merging defaults with on-disk settings
+- validating configuration structure
+- returning enabled package managers
+- updating persisted settings
 
-### Other Package Manager Modules
-- `UPM.PackageManager.Scoop.psm1` - Scoop command-line installer
-- `UPM.PackageManager.Npm.psm1` - NPM global packages
-- `UPM.PackageManager.Pip.psm1` - Python pip packages
-- `UPM.PackageManager.Conda.psm1` - Conda data science packages
+Notable configuration sections:
 
-## Main Orchestrator
+- `Advanced`
+- `Logging`
+- `Service`
+- `UI`
+- `PackageManagers`
+- `PackageManagerInstaller`
 
-### UniversalPackageManager.ps1
-The main script is now a lightweight orchestrator (318 lines vs 2000+ in the monolithic version) that:
-- Imports all required modules
-- Initializes the logging and configuration systems
-- Maps package managers to their respective module functions
-- Coordinates execution across all package managers
-- Provides three main operations: Update, Status, Configure
+### `UPM.ProcessExecution.psm1`
 
-**Key Functions**:
-- `Initialize-UPM` - System initialization
-- `Invoke-PackageManagerUpdate` - Execute update for specific package manager
-- `Invoke-UpdateOperation` - Coordinate updates across all package managers
-- `Invoke-StatusOperation` - Display system status
-- `Invoke-ConfigureOperation` - Open configuration editor
+Handles:
 
-## Benefits of Modular Architecture
+- process execution with timeout support
+- retry logic for external commands
+- command discovery
+- npm-specific `.cmd` lookup to avoid incorrect PowerShell script selection
 
-### 1. **Maintainability**
-- Each module has a single responsibility
-- Easy to locate and fix issues
-- Clear separation of concerns
-- Individual modules can be tested independently
+Use this module for all external command execution instead of calling tools directly from modules.
 
-### 2. **Reliability** 
-- Emoji/Unicode issues resolved at the module level
-- Consistent error handling patterns
-- Better isolation of package manager specific logic
-- Reduced risk of cascade failures
+## Package manager modules
 
-### 3. **Extensibility**
-- Easy to add new package managers
-- Consistent interface patterns
-- Modular configuration management
-- Plugin-like architecture
+Each package manager module exposes the same primary interface:
 
-### 4. **Performance**
-- Modules loaded only when needed
-- Better memory management
-- Easier to optimize individual components
-- Parallel execution possibilities
+- `Test-<Name>Available`
+- `Update-<Name>Packages`
+- `Get-<Name>Info`
 
-### 5. **Testing**
-- Individual modules can be unit tested
-- Mock dependencies easily
-- Isolated testing environments
-- Better code coverage
+### `UPM.PackageManager.Winget.psm1`
 
-## Emoji/Unicode Compatibility
+- Manages winget updates
+- Includes well-known WindowsApps path fallbacks
+- Also exports:
+  - `Get-WingetPackages`
+  - `Get-WingetUpgradablePackages`
 
-All modules have been designed to avoid emoji and Unicode characters that caused issues with Windows PowerShell 5.1. Instead of emojis, we use:
-- `SUCCESS:` instead of ✅
-- `ERROR:` instead of ❌  
-- `WARNING:` instead of ⚠️
-- Descriptive text instead of decorative emojis
+### `UPM.PackageManager.Chocolatey.psm1`
 
-## PowerShell 7+ Exclusive Features
+- Manages Chocolatey updates
+- Also exports:
+  - `Get-ChocolateyPackages`
+  - `Get-ChocolateyUpgradablePackages`
+  - `Update-ChocolateyItself`
 
-The modular architecture takes advantage of PowerShell 7+ features:
-- `#Requires -Version 7.0` in all modules
-- `Start-Process -TimeoutSec` parameter
-- `$PSStyle` for ANSI colors
-- Enhanced JSON handling with `-AsHashtable`
-- Modern error handling patterns
-- Advanced function parameter validation
+### `UPM.PackageManager.Scoop.psm1`
 
-## Migration from v2.x
+- Manages Scoop updates
+- Intended for user-scoped installs
 
-The modular v3.0 maintains compatibility with v2.x configuration files while providing enhanced features. The old monolithic script is preserved as `UniversalPackageManager-old.ps1` for reference.
+### `UPM.PackageManager.Npm.psm1`
 
-## Usage Examples
+- Manages global npm package updates
+- Relies on `npm.cmd` resolution from the process-execution module
 
-```powershell
-# Standard update operation
-pwsh -File "UniversalPackageManager.ps1"
+### `UPM.PackageManager.Pip.psm1`
 
-# Update specific package managers only
-pwsh -File "UniversalPackageManager.ps1" -PackageManagers @("winget", "choco")
+- Manages pip package updates
+- Searches common system-wide Python installation paths when PATH lookup fails
 
-# Dry run to see what would be updated
-pwsh -File "UniversalPackageManager.ps1" -DryRun
+### `UPM.PackageManager.Conda.psm1`
 
-# Status check
-pwsh -File "UniversalPackageManager.ps1" -Operation Status
+- Manages Conda package updates
+- Prefers system-wide install locations for SYSTEM-context compatibility
+- Avoids depending on unsupported AllUsers `/AddToPath=1` installation behavior
 
-# Configure settings
-pwsh -File "UniversalPackageManager.ps1" -Operation Configure
+## Extension pattern
 
-# Debug logging
-pwsh -File "UniversalPackageManager.ps1" -LogLevel Debug
-```
+To add another package manager module:
 
-## Future Enhancements
+1. Create a new `UPM.PackageManager.<Name>.psm1` file
+2. Implement `Test`, `Update`, and `Info` functions following the existing naming convention
+3. Use `Write-UPMLog` for logging
+4. Use `Invoke-UPMProcess` for external commands
+5. Import the module in `UniversalPackageManager.ps1`
+6. Add the package manager to the orchestrator function map
+7. Add matching configuration in `config/settings.json`
 
-The modular architecture enables future enhancements such as:
-- Additional package managers (brew, apt, yum, etc.)
-- Parallel package manager execution
-- Package manager dependency resolution
-- Advanced scheduling and orchestration
-- Remote package manager management
-- Configuration templates and profiles
+## Operational design notes
+
+- PowerShell 7+ is required throughout the project
+- The scheduled task runs as `SYSTEM` with highest privileges
+- Most package managers are expected to be installed machine-wide
+- Scoop remains the exception because it is user-scoped by design
+- Logging is daily, not per execution
