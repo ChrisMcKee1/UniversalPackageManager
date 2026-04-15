@@ -1,76 +1,119 @@
-# Universal Package Manager Usage Guide
+# Universal Package Manager usage
 
-## Basic Usage
+This guide focuses on day-to-day operation of UPM after the files are in place.
 
-### Run with clean output (default)
+## Main script
+
+The main entry point is:
+
 ```powershell
 pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1"
 ```
 
-### Run with detailed debugging information
+### Parameters
+
+| Parameter | Purpose | Values |
+| --- | --- | --- |
+| `-Operation` | Select the workflow to run | `Update`, `Status`, `Configure` |
+| `-SelectedPackageManagers` | Limit execution to specific package managers | `winget`, `choco`, `scoop`, `npm`, `pip`, `conda` |
+| `-DryRun` | Preview changes without applying updates | switch |
+| `-LogLevel` | Control verbosity | `Debug`, `Info`, `Warning`, `Error` |
+| `-Silent` | Reduce console output | switch |
+| `-ConfigPath` | Use an alternate configuration file | file path |
+
+## Common operations
+
+### Update all enabled package managers
+
 ```powershell
-pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -LogLevel Debug
+pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1"
 ```
 
-### Run specific package managers only
-```powershell
-pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -SelectedPackageManagers @("winget", "npm")
-```
+### Dry run
 
-### Check what would be updated without making changes
 ```powershell
 pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -DryRun
 ```
 
-## Log Levels
+### Debug a specific package manager
 
-- **Info** (default): Shows essential progress and results
-- **Warning**: Shows Info + warnings  
-- **Error**: Shows only errors and critical messages
-- **Debug**: Shows all detailed debugging information
-
-## Package Manager Installer
-
-### Install missing package managers
 ```powershell
-pwsh -File "C:\ProgramData\UniversalPackageManager\PackageManagerInstaller.ps1"
+pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -SelectedPackageManagers @("conda") -DryRun -LogLevel Debug
 ```
 
-### Install specific package managers
-```powershell
-pwsh -File "C:\ProgramData\UniversalPackageManager\PackageManagerInstaller.ps1" -PackageManagers @("conda", "scoop")
-```
+### Check status
 
-## Operations
-
-### Update packages (default)
-```powershell
-pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -Operation Update
-```
-
-### Check status of package managers
 ```powershell
 pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -Operation Status
 ```
 
-### Configure settings
+### Open the configuration file in the default editor
+
 ```powershell
 pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -Operation Configure
 ```
 
-## Examples
+## Scheduled task installation
 
-### Quiet operation with minimal output
+Create or recreate the scheduled task:
+
 ```powershell
-pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -LogLevel Warning -Silent
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\Install-UPM.ps1"
 ```
 
-### Verbose debugging for troubleshooting
+Create a weekly schedule on Sunday at 03:30:
+
 ```powershell
-pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -LogLevel Debug
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\Install-UPM.ps1" -Frequency Weekly -UpdateTime "03:30"
 ```
 
-### Update only npm and pip packages
+The installer creates a task named `Universal Package Manager` that runs as `SYSTEM` with highest privileges.
+
+## Package manager installation
+
+Install or upgrade all supported package managers:
+
 ```powershell
-pwsh -File "C:\ProgramData\UniversalPackageManager\UniversalPackageManager.ps1" -SelectedPackageManagers @("npm", "pip")
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\PackageManagerInstaller.ps1"
 ```
+
+Install only selected targets:
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\PackageManagerInstaller.ps1" -PackageManagers @("choco", "conda")
+```
+
+Force reinstall without prompts:
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File "C:\ProgramData\UniversalPackageManager\PackageManagerInstaller.ps1" -Force -SkipConfirmation
+```
+
+Valid installer targets are `winget`, `choco`, `scoop`, `nodejs`, `python`, `conda`, and `all`.
+
+## Logging and diagnostics
+
+### Read the newest file log
+
+```powershell
+Get-Content (Get-ChildItem "C:\ProgramData\UniversalPackageManager\logs\UPM-*.log" | Sort-Object CreationTime | Select-Object -Last 1).FullName -Tail 50
+```
+
+### Check Windows Event Log entries
+
+```powershell
+Get-WinEvent -LogName Application -Source "UniversalPackageManager" -MaxEvents 20
+```
+
+### Inspect the scheduled task
+
+```powershell
+Get-ScheduledTask -TaskName "Universal Package Manager" | Get-ScheduledTaskInfo
+```
+
+## Notes
+
+- Scoop is user-scoped and is not expected to work from the SYSTEM scheduled task
+- npm detection intentionally prefers `npm.cmd`
+- pip, Conda, and winget include well-known path fallbacks for SYSTEM-context execution
+- Log rotation is daily and retention is controlled by `Advanced.logRetentionDays`
